@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 720" font-family="Arial, Helvetica, sans-serif">
+  <style>
+    .wire   { stroke:#222; stroke-width:2; fill:none; }
+    .comp   { stroke:#222; stroke-width:2; fill:none; }
+    .modfill{ fill:#eef2f7; stroke:#222; stroke-width:2; }
+    .lbl    { font-size:13px; fill:#111; }
+    .lblb   { font-size:13px; fill:#111; font-weight:bold; }
+    .node   { font-size:12px; fill:#0b57a4; font-weight:bold; }
+    .val    { font-size:12px; fill:#7a2b0c; }
+    .gndlbl { font-size:12px; fill:#111; }
+    .title  { font-size:18px; fill:#111; font-weight:bold; }
+    .sub    { font-size:12px; fill:#555; }
+    .dot    { fill:#222; }
+  </style>
+
+  <text x="30" y="34" class="title">Power Survivability Unit — Circuit Schematic</text>
+  <text x="30" y="52" class="sub">eEDR project · caps charge from 5.3V rail (Pi never exceeds 5.1V) · ~3.7s backup</text>
+
+  <!-- ================= GROUND RAIL ================= -->
+  <line x1="60" y1="670" x2="900" y2="670" class="wire"/>
+  <text x="64" y="690" class="gndlbl">GND</text>
+
+  <!-- ================= BRANCH 1: MAIN POWER (top) ================= -->
+  <!-- 12V supply -->
+  <rect x="40" y="88" width="70" height="56" class="modfill"/>
+  <text x="55" y="112" class="lblb">12V</text>
+  <text x="52" y="130" class="lbl">supply</text>
+  <line x1="75" y1="144" x2="75" y2="670" class="wire"/>       <!-- supply - to GND -->
+  <line x1="110" y1="116" x2="150" y2="116" class="wire"/>      <!-- + out -->
+
+  <!-- Switch SW -->
+  <circle cx="152" cy="116" r="3" class="dot"/>
+  <line x1="152" y1="116" x2="188" y2="100" class="comp"/>      <!-- open blade -->
+  <circle cx="190" cy="116" r="3" class="dot"/>
+  <text x="150" y="86" class="lbl">SW</text>
+  <line x1="190" y1="116" x2="228" y2="116" class="wire"/>
+
+  <!-- Fuse -->
+  <rect x="228" y="106" width="52" height="20" class="comp"/>
+  <text x="232" y="98" class="lbl">Fuse 2A</text>
+  <line x1="280" y1="116" x2="320" y2="116" class="wire"/>
+
+  <!-- Reverse-polarity diode 1N5401 -->
+  <polygon points="322,106 342,116 322,126" class="comp" fill="#222"/>
+  <line x1="342" y1="106" x2="342" y2="126" class="comp"/>      <!-- cathode bar -->
+  <text x="312" y="98" class="lbl">1N5401</text>
+  <line x1="342" y1="116" x2="410" y2="116" class="wire"/>
+
+  <!-- PROTECTED 12V node -->
+  <circle cx="410" cy="116" r="4" class="dot"/>
+  <text x="392" y="102" class="node">P12</text>
+  <line x1="410" y1="116" x2="470" y2="116" class="wire"/>
+
+  <!-- Buck module -->
+  <rect x="470" y="86" width="120" height="62" class="modfill"/>
+  <text x="486" y="112" class="lblb">LM2596</text>
+  <text x="486" y="130" class="val">buck → 5.3V</text>
+  <line x1="470" y1="140" x2="470" y2="670" class="wire"/>      <!-- buck IN-/OUT- to GND (left-bottom) -->
+  <circle cx="470" cy="140" r="3" class="dot"/>
+
+  <!-- RAIL out -->
+  <line x1="590" y1="116" x2="640" y2="116" class="wire"/>
+  <circle cx="640" cy="116" r="4" class="dot"/>
+  <text x="612" y="102" class="node">5V RAIL</text>
+  <line x1="640" y1="116" x2="770" y2="116" class="wire"/>
+
+  <!-- Pi power merge node -->
+  <circle cx="770" cy="116" r="4" class="dot"/>
+  <text x="742" y="102" class="node">Pi PWR</text>
+
+  <!-- Raspberry Pi -->
+  <rect x="800" y="86" width="150" height="150" class="modfill"/>
+  <text x="826" y="120" class="lblb">Raspberry Pi</text>
+  <text x="826" y="138" class="sub">(EDR unit)</text>
+  <line x1="770" y1="116" x2="800" y2="116" class="wire"/>
+  <text x="806" y="160" class="lbl">USB 5V in</text>
+  <!-- GPIO pin stub -->
+  <line x1="800" y1="200" x2="770" y2="200" class="wire"/>
+  <text x="806" y="204" class="lbl">GPIO17</text>
+
+  <!-- ================= BRANCH 3: SENSING (standalone, left side) ================= -->
+  <!-- tap P12 and route left along y=170 to a clean vertical at x=200 -->
+  <circle cx="410" cy="116" r="0"/>
+  <line x1="410" y1="150" x2="410" y2="170" class="wire"/>
+  <line x1="410" y1="170" x2="200" y2="170" class="wire"/>
+  <line x1="200" y1="170" x2="200" y2="250" class="wire"/>
+  <!-- junction dot on P12 vertical where the sense tap leaves -->
+  <circle cx="410" cy="170" r="4" class="dot"/>
+  <!-- R1 10k -->
+  <rect x="190" y="250" width="20" height="46" class="comp"/>
+  <text x="140" y="277" class="lbl">R1 10k</text>
+  <line x1="200" y1="296" x2="200" y2="360" class="wire"/>
+  <!-- NODE A junction -->
+  <circle cx="200" cy="360" r="4.5" class="dot"/>
+  <text x="120" y="356" class="node">NODE A</text>
+  <text x="128" y="372" class="val">~2.16V</text>
+  <!-- wire from NODE A down into top of R2 (this was the missing link) -->
+  <line x1="200" y1="360" x2="200" y2="390" class="wire"/>
+  <!-- R2 2.2k down to GND -->
+  <rect x="190" y="390" width="20" height="46" class="comp"/>
+  <text x="140" y="417" class="lbl">R2 2.2k</text>
+  <line x1="200" y1="436" x2="200" y2="670" class="wire"/>
+  <!-- NODE A across to GPIO17, routed high at y=360 then over to the Pi; clean single vertical up -->
+  <line x1="200" y1="360" x2="200" y2="360" class="wire"/>
+  <line x1="200" y1="360" x2="240" y2="360" class="wire"/>
+  <line x1="240" y1="360" x2="240" y2="230" class="wire"/>
+  <line x1="240" y1="230" x2="770" y2="230" class="wire"/>
+  <line x1="770" y1="230" x2="770" y2="200" class="wire"/>
+  <!-- junction dot where GPIO wire leaves NODE A stub -->
+  <circle cx="200" cy="360" r="4.5" class="dot"/>
+
+  <!-- ================= BRANCH 2: SUPERCAP BACKUP (from RAIL) ================= -->
+  <!-- charge path down from RAIL node -->
+  <line x1="640" y1="116" x2="640" y2="250" class="wire"/>
+  <!-- R charge 22ohm -->
+  <rect x="630" y="250" width="20" height="46" class="comp"/>
+  <text x="654" y="277" class="lbl">22Ω 2W</text>
+  <line x1="640" y1="296" x2="640" y2="330" class="wire"/>
+  <!-- D1 blocking diode 1N5819 pointing DOWN (cathode bottom) -->
+  <polygon points="630,332 650,332 640,352" class="comp" fill="#222"/>
+  <line x1="630" y1="352" x2="650" y2="352" class="comp"/>
+  <text x="654" y="348" class="lbl">1N5819 (D1)</text>
+  <line x1="640" y1="352" x2="640" y2="430" class="wire"/>
+
+  <!-- CAP+ node -->
+  <circle cx="640" cy="430" r="4" class="dot"/>
+  <text x="652" y="426" class="node">CAP+</text>
+
+  <!-- Cap bank: series along y=520 bus. Right end = CAP+, left end = GND. -->
+  <line x1="640" y1="430" x2="640" y2="520" class="wire"/>
+
+  <!-- helper: each cap = two plates (long/short) with a small gap; series nodes between -->
+  <!-- cap C (right, nearest CAP+): plates around x=600 -->
+  <line x1="640" y1="520" x2="606" y2="520" class="wire"/>
+  <line x1="606" y1="506" x2="606" y2="534" class="comp"/>
+  <line x1="598" y1="512" x2="598" y2="528" class="comp"/>
+  <line x1="598" y1="520" x2="520" y2="520" class="wire"/>
+  <circle cx="520" cy="520" r="3" class="dot"/>
+  <text x="590" y="552" class="lbl">10F</text>
+
+  <!-- cap B (middle): plates around x=480 -->
+  <line x1="520" y1="520" x2="486" y2="520" class="wire"/>
+  <line x1="486" y1="506" x2="486" y2="534" class="comp"/>
+  <line x1="478" y1="512" x2="478" y2="528" class="comp"/>
+  <line x1="478" y1="520" x2="400" y2="520" class="wire"/>
+  <circle cx="400" cy="520" r="3" class="dot"/>
+  <text x="470" y="552" class="lbl">10F</text>
+
+  <!-- cap A (left): plates around x=360 -->
+  <line x1="400" y1="520" x2="366" y2="520" class="wire"/>
+  <line x1="366" y1="506" x2="366" y2="534" class="comp"/>
+  <line x1="358" y1="512" x2="358" y2="528" class="comp"/>
+  <line x1="358" y1="520" x2="300" y2="520" class="wire"/>
+  <text x="350" y="552" class="lbl">10F</text>
+
+  <text x="386" y="588" class="sub">3× 2.7V supercaps in series · 1kΩ across each (balancing)</text>
+
+  <!-- left end of bank to GND -->
+  <line x1="300" y1="520" x2="300" y2="670" class="wire"/>
+  <circle cx="300" cy="670" r="3" class="dot"/>
+
+  <!-- Boost module from CAP+ -->
+  <line x1="640" y1="430" x2="690" y2="430" class="wire"/>
+  <rect x="690" y="400" width="120" height="60" class="modfill"/>
+  <text x="706" y="426" class="lblb">MT3608</text>
+  <text x="706" y="444" class="val">boost → 5.1V</text>
+  <line x1="690" y1="452" x2="690" y2="670" class="wire"/>   <!-- boost GND -->
+  <circle cx="690" cy="452" r="3" class="dot"/>
+  <!-- boost out up to Pi PWR merge -->
+  <line x1="810" y1="430" x2="860" y2="430" class="wire"/>
+  <line x1="860" y1="430" x2="860" y2="116" class="wire"/>
+  <line x1="860" y1="116" x2="770" y2="116" class="wire"/>
+  <text x="864" y="280" class="sub">boost output</text>
+  <text x="864" y="296" class="sub">(idle until</text>
+  <text x="864" y="312" class="sub">rail drops)</text>
+
+  <!-- ground junction dots along GND rail (only at real connections) -->
+  <circle cx="75" cy="670" r="3" class="dot"/>
+  <circle cx="200" cy="670" r="3" class="dot"/>
+  <circle cx="300" cy="670" r="3" class="dot"/>
+  <circle cx="470" cy="670" r="3" class="dot"/>
+  <circle cx="640" cy="670" r="3" class="dot"/>
+  <circle cx="690" cy="670" r="3" class="dot"/>
+
+  <!-- ===== legend ===== -->
+  <rect x="30" y="560" width="230" height="92" fill="#fafafa" stroke="#ccc"/>
+  <text x="42" y="582" class="lblb">Notes</text>
+  <text x="42" y="602" class="sub">• Crossing wires with no dot = not joined</text>
+  <text x="42" y="620" class="sub">• Trim buck 5.3V &amp; boost 5.1V before Pi</text>
+  <text x="42" y="638" class="sub">• Caps ≤5V → Pi never over-volted</text>
+</svg>

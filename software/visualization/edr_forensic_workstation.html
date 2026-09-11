@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eEDR — Forensic Analysis Workstation</title>
+<style>
+  :root{
+    --bg:#eaeef3; --bg2:#e1e7ef; --panel:#ffffff; --panel2:#f4f7fa; --raise:#ffffff;
+    --edge:#d3dce7; --edge2:#bccadb;
+    --ink:#141b26; --dim:#5a6b80; --dimmer:#93a2b5;
+    --cyan:#0891b2; --blue:#2563eb; --amber:#e08307; --red:#e11d48; --green:#0a9d63; --violet:#7c3aed; --pink:#db2777;
+    --mono:'Cascadia Code',Consolas,'DejaVu Sans Mono',Menlo,monospace;
+    --sans:Verdana,Geneva,'DejaVu Sans',Tahoma,sans-serif;
+    --r:10px; --r-sm:6px;
+    --shadow:0 6px 20px rgba(30,50,80,.10),0 1px 0 rgba(255,255,255,.6) inset;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:12px;overflow:hidden;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    background-image:radial-gradient(1200px 620px at 80% -10%,rgba(37,99,235,.05) 0,transparent 60%),
+                    radial-gradient(900px 520px at -5% -5%,rgba(8,145,178,.05) 0,transparent 55%);}
+  .app{height:100vh;display:flex;flex-direction:column;padding:11px;gap:11px}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--edge2);border-radius:6px;border:2px solid var(--panel)}
+  ::-webkit-scrollbar-thumb:hover{background:#9aabbe}
+
+  /* header */
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:11px 16px;border:1px solid var(--edge);border-radius:var(--r);
+    background:linear-gradient(180deg,var(--raise),var(--panel));box-shadow:var(--shadow)}
+  .brand{display:flex;align-items:center;gap:13px}
+  .logo{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font-weight:700;font-size:12px;
+    color:#ffffff;font-family:var(--sans);letter-spacing:.3px;
+    background:linear-gradient(145deg,#0ea5c4,#0e7490);
+    box-shadow:0 4px 14px rgba(8,145,178,.32),0 1px 0 rgba(255,255,255,.35) inset}
+  .brand h1{font-size:14px;font-weight:700;letter-spacing:-.1px}
+  .brand .sub{font-size:9px;color:var(--dim);letter-spacing:1.2px;text-transform:uppercase;margin-top:3px}
+  .ctrls{display:flex;align-items:center;gap:8px}
+  select,button{font-family:var(--sans);font-size:11px;border:1px solid var(--edge);
+    background:var(--panel2);color:var(--ink);padding:8px 12px;border-radius:var(--r-sm);cursor:pointer;
+    transition:border-color .15s,background .15s,transform .06s,box-shadow .15s}
+  select:hover,button:hover{border-color:var(--edge2)}
+  select:focus,button:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+  button:active{transform:translateY(1px)}
+  button.run{background:linear-gradient(180deg,#0ea5c4,#0e7490);color:#ffffff;border-color:#0e7490;font-weight:700;letter-spacing:.3px;
+    box-shadow:0 4px 16px rgba(8,145,178,.32)}
+  button.run:hover{filter:brightness(1.06);box-shadow:0 6px 20px rgba(8,145,178,.44)}
+  button:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+  button.mini{padding:6px 10px;font-size:10px;letter-spacing:.3px}
+  .stat{font-size:9.5px;letter-spacing:.8px;padding:7px 13px;border:1px solid var(--edge);border-radius:var(--r-sm);
+    display:flex;align-items:center;gap:8px;text-transform:uppercase;white-space:nowrap;background:var(--panel2);font-weight:700}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+  .s-mon{color:var(--green);border-color:rgba(70,209,154,.42);background:rgba(70,209,154,.07)} .s-mon .dot{background:var(--green);box-shadow:0 0 9px var(--green);animation:bl 1.4s infinite}
+  .s-crash{color:var(--red);border-color:rgba(242,96,106,.5);background:rgba(242,96,106,.08)} .s-crash .dot{background:var(--red);box-shadow:0 0 10px var(--red);animation:bl .3s infinite}
+  .s-lock{color:var(--amber);border-color:rgba(242,181,68,.5);background:rgba(242,181,68,.07)} .s-lock .dot{background:var(--amber);box-shadow:0 0 9px var(--amber)}
+  .s-idle{color:var(--dim)}
+  @keyframes bl{0%,100%{opacity:1}50%{opacity:.25}}
+
+  /* body: 3 columns */
+  .body{flex:1;display:grid;grid-template-columns:210px minmax(0,1fr) 268px;gap:11px;min-height:0}
+  .rail{border:1px solid var(--edge);border-radius:var(--r);background:linear-gradient(180deg,var(--panel),var(--bg2));
+    box-shadow:var(--shadow);overflow-y:auto;padding:14px 13px}
+  .center{display:flex;flex-direction:column;min-height:0}
+
+  .sect{margin-bottom:18px}
+  .sect .st{font-size:9.5px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;font-weight:700;
+    padding-bottom:7px;margin-bottom:9px;border-bottom:1px solid var(--edge);display:flex;align-items:center;gap:7px}
+  .sect .st::before{content:"";width:3px;height:12px;border-radius:2px;background:var(--cyan);box-shadow:0 0 8px rgba(52,207,224,.55)}
+
+  /* state machine */
+  .fsm{display:flex;flex-direction:column}
+  .fsm .node{display:flex;align-items:center;gap:9px;padding:4px 0;font-size:11px;color:var(--dimmer);transition:color .2s}
+  .fsm .node .ic{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--dimmer);flex:none;transition:all .2s}
+  .fsm .node.done{color:var(--dim)} .fsm .node.done .ic{border-color:var(--green);background:var(--green)}
+  .fsm .node.active{color:var(--cyan)} .fsm .node.active .ic{border-color:var(--cyan);background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+  .fsm .line{width:2px;height:9px;background:var(--edge);margin-left:4px;border-radius:2px}
+
+  /* triggers */
+  .trig{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 0;color:var(--dim)}
+  .trig .led{width:9px;height:9px;border-radius:3px;background:var(--edge2);transition:all .2s}
+  .trig.fired{color:var(--red)} .trig.fired .led{background:var(--red);box-shadow:0 0 9px var(--red)}
+
+  /* event log */
+  .evlog{display:flex;flex-direction:column;gap:5px}
+  .evrow{border:1px solid var(--edge);border-radius:var(--r-sm);padding:8px 9px;cursor:pointer;background:var(--panel2);transition:border-color .15s,background .15s}
+  .evrow:hover{border-color:var(--edge2);background:var(--raise)} .evrow.sel{border-color:var(--cyan);background:rgba(52,207,224,.07)}
+  .evrow .eid{font-size:11px;color:var(--cyan);font-weight:700} .evrow .em{font-size:9.5px;color:var(--dim);margin-top:3px}
+  .empty{font-size:10.5px;color:var(--dimmer);font-style:italic}
+  .counter{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);padding:3px 0}
+  .counter b{color:var(--ink);font-weight:700;font-family:var(--mono)}
+
+  /* tabs */
+  .tabs{display:flex;gap:2px;border:1px solid var(--edge);border-radius:var(--r);background:linear-gradient(180deg,var(--raise),var(--panel));
+    box-shadow:var(--shadow);overflow-x:auto;padding:5px;margin-bottom:11px}
+  .tab{padding:8px 15px;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--dim);font-weight:700;
+    cursor:pointer;border-radius:var(--r-sm);white-space:nowrap;transition:color .15s,background .15s}
+  .tab:hover{color:var(--ink);background:var(--panel2)}
+  .tab.on{color:#ffffff;background:linear-gradient(180deg,#0ea5c4,#0e7490);box-shadow:0 3px 12px rgba(8,145,178,.32)}
+  .views{flex:1;position:relative;min-height:0}
+  .view{position:absolute;inset:0;display:none;overflow:auto}
+  .view.on{display:block}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;height:100%}
+  .grid2.rows{grid-template-rows:1fr 1fr}
+  .pane{border:1px solid var(--edge);border-radius:var(--r);background:linear-gradient(180deg,var(--panel),var(--panel2));
+    box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0}
+  .pane .ph{font-size:9.5px;letter-spacing:.6px;color:var(--dim);text-transform:uppercase;font-weight:700;
+    padding:9px 12px;border-bottom:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center}
+  .pane .pb{flex:1;position:relative;min-height:0}
+  .pane canvas{width:100%;height:100%;display:block}
+  .pane svg{width:100%;height:100%;display:block}
+
+  /* metric cells */
+  .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--edge);border:1px solid var(--edge);border-radius:var(--r-sm);overflow:hidden}
+  .mcell{background:var(--panel);padding:11px 12px}
+  .mcell .mk{font-size:9px;color:var(--dim);letter-spacing:.5px;text-transform:uppercase}
+  .mcell .mv{font-size:20px;font-weight:700;margin-top:4px;font-family:var(--mono);letter-spacing:-.3px}
+  .mcell .mu{font-size:9px;color:var(--dim);font-weight:400}
+
+  /* right rail readouts */
+  .verdict{font-size:17px;font-weight:700;letter-spacing:.2px;padding:6px 0}
+  .verdict.Severe{color:var(--red)} .verdict.Moderate{color:var(--amber)} .verdict.Minor{color:var(--green)} .verdict.none{color:var(--dimmer)}
+  .kv{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:4px 0;border-bottom:1px solid rgba(150,165,185,.35)}
+  .kv .k{color:var(--dim)} .kv .v{color:var(--ink);font-weight:700;font-family:var(--mono)}
+  .kv .v.bad{color:var(--red)} .kv .v.warn{color:var(--amber)} .kv .v.on{color:var(--green)}
+  .lock{font-size:9.5px;padding:4px 9px;border-radius:4px;letter-spacing:.5px;font-weight:700}
+  .lock.eng{color:var(--amber);border:1px solid var(--amber);background:rgba(242,181,68,.09)} .lock.opn{color:var(--dim);border:1px solid var(--edge)}
+  .hash{font-size:9px;color:var(--cyan);word-break:break-all;line-height:1.6;font-family:var(--mono);
+    background:var(--panel2);border:1px solid var(--edge);border-radius:var(--r-sm);padding:8px;margin-top:5px}
+
+  /* data table */
+  .dtbl{display:grid;grid-template-columns:repeat(4,1fr);gap:1px 20px;font-size:11.5px}
+  .dtbl .grp{grid-column:1/-1;font-size:8.5px;color:var(--cyan);letter-spacing:1px;text-transform:uppercase;font-weight:700;
+    margin:11px 0 4px;border-bottom:1px solid var(--edge);padding-bottom:3px}
+  .dtbl .kv{border:none;padding:2px 0}
+  .dtbl .kv .k{color:var(--dim)} .dtbl .kv .v{font-family:var(--mono)}
+
+  .risk-bar{height:10px;border-radius:5px;background:linear-gradient(90deg,var(--green),var(--amber),var(--red));position:relative;margin:8px 0}
+  .risk-bar .marker{position:absolute;top:-3px;width:3px;height:16px;border-radius:2px;background:#fff;box-shadow:0 0 6px #fff}
+  .note{font-size:9.5px;color:var(--dimmer);line-height:1.6;margin-top:7px}
+  .scrub{display:flex;align-items:center;gap:10px;font-size:9.5px;color:var(--dim);padding:9px 14px;border:1px solid var(--edge);
+    border-radius:var(--r);background:linear-gradient(180deg,var(--raise),var(--panel));box-shadow:var(--shadow);margin-top:11px;letter-spacing:.5px;font-weight:700}
+  .scrub span:not(:first-child){font-family:var(--mono);font-weight:400}
+  input[type=range]{flex:1;accent-color:var(--cyan);height:4px}
+  .loading{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:var(--bg);color:var(--cyan);letter-spacing:2px}
+
+  .rpt h4{font-size:10px;letter-spacing:.6px;color:var(--cyan);text-transform:uppercase;margin:16px 0 6px;font-weight:700}
+  .rpt h4:first-child{margin-top:0}
+  .rpt p{font-size:13px;line-height:1.85;color:var(--ink);margin-bottom:5px}
+  .rpt .num{color:var(--amber);font-family:var(--mono);font-size:12px}
+  .rpt .sev{font-weight:700}
+  @media(max-width:1180px){.body{grid-template-columns:184px 1fr 240px}}
+</style>
+</head>
+<body>
+<div class="loading" id="loading">LOADING WORKSTATION…</div>
+<div class="app">
+  <header>
+    <div class="brand"><div class="logo">EDR</div>
+      <div><h1>Enhanced Event Data Recorder</h1>
+        <div class="sub">Forensic Analysis Workstation · v1.0</div></div></div>
+    <div class="ctrls">
+      <select id="scenario">
+        <option value="normal_drive">TC-01 · Normal drive</option>
+        <option value="hard_brake">TC-02 · Hard braking</option>
+        <option value="frontal_collision" selected>TC-03 · Frontal collision</option>
+        <option value="side_impact_left">TC-04 · Lateral impact (L)</option>
+        <option value="rollover">TC-05 · Rollover</option>
+        <option value="power_loss_during_crash">TC-06 · Power-loss impact</option>
+      </select>
+      <select id="speed"><option value="1">1×</option><option value="2" selected>2×</option>
+        <option value="4">4×</option><option value="8">8×</option></select>
+      <button id="run" class="run">▶ EXECUTE</button>
+      <button id="reset">RESET</button>
+      <div id="status" class="stat s-idle"><span class="dot"></span><span id="statusText">Standby</span></div>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- LEFT RAIL -->
+    <div class="rail">
+      <div class="sect"><div class="st">Acquisition State</div>
+        <div class="fsm" id="fsm"></div></div>
+      <div class="sect"><div class="st">Trigger Sources</div>
+        <div id="triggers"></div></div>
+      <div class="sect"><div class="st">Acquisition Stats</div>
+        <div class="counter"><span>sampling</span><b>100 Hz</b></div>
+        <div class="counter"><span>samples</span><b id="cSamples">0</b></div>
+        <div class="counter"><span>buffer</span><b id="cBuffer">0 / 2000</b></div>
+        <div class="counter"><span>elapsed</span><b id="cTime">0.00 s</b></div>
+        <div class="counter"><span>events</span><b id="cEvents">0</b></div>
+      </div>
+      <div class="sect"><div class="st">Event Log</div>
+        <div class="evlog" id="evlog"><div class="empty">no events captured</div></div></div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="center">
+      <div class="tabs" id="tabs">
+        <div class="tab on" data-v="overview">Overview</div>
+        <div class="tab" data-v="recon">Reconstruction</div>
+        <div class="tab" data-v="pulse">Crash Pulse</div>
+        <div class="tab" data-v="biomech">Biomechanics</div>
+        <div class="tab" data-v="kinematics">Kinematics</div>
+        <div class="tab" data-v="spectrum">Spectrum</div>
+        <div class="tab" data-v="trajectory">Trajectory</div>
+        <div class="tab" data-v="data">Data Frame</div>
+        <div class="tab" data-v="forensic">Forensic</div>
+        <div class="tab" data-v="report">Report</div>
+      </div>
+      <div class="views" id="views">
+
+        <div class="view on" data-v="overview">
+          <div class="grid2 rows">
+            <div class="pane"><div class="ph"><span>Accelerometer · aₓ a_y a_z |a| [g]</span><span id="accMeta">—</span></div>
+              <div class="pb"><canvas id="accScope"></canvas></div></div>
+            <div class="pane"><div class="ph"><span>Velocity [km/h] · Steering [°]</span><span></span></div>
+              <div class="pb"><canvas id="velScope"></canvas></div></div>
+          </div>
+        </div>
+
+        <div class="view" data-v="recon">
+          <div class="pane" style="height:100%"><div class="ph"><span>Kinematic Reconstruction · scaled top-down · metric grid</span><span id="reconMeta">—</span></div>
+            <div class="pb"><canvas id="reconCv"></canvas></div></div>
+        </div>
+
+        <div class="view" data-v="pulse">
+          <div class="grid2">
+            <div class="pane"><div class="ph"><span>Crash Pulse · resultant |a| vs t · Δv = ∫a·dt (shaded)</span><span></span></div>
+              <div class="pb"><canvas id="pulseCv"></canvas></div></div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div class="mgrid" id="pulseMetrics"></div>
+              <div class="pane" style="flex:1"><div class="ph"><span>Velocity profile · v(t) integrated</span><span></span></div>
+                <div class="pb"><canvas id="pulseVel"></canvas></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view" data-v="biomech">
+          <div class="grid2">
+            <div class="pane"><div class="ph"><span>Head resultant acceleration · HIC window</span><span id="hicMeta"></span></div>
+              <div class="pb"><canvas id="hicCv"></canvas></div></div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div class="mgrid" id="bioMetrics"></div>
+              <div class="pane" style="flex:1"><div class="ph"><span>Injury risk assessment</span><span></span></div>
+                <div class="pb" style="padding:14px">
+                  <div style="font-size:10px;color:var(--dim);letter-spacing:1px">HEAD INJURY CRITERION (HIC₃₆)</div>
+                  <div class="risk-bar"><div class="marker" id="hicMarker" style="left:0%"></div></div>
+                  <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--dimmer)">
+                    <span>0 · none</span><span>700 · AIS3 threshold</span><span>1500 · fatal</span></div>
+                  <div id="injuryText" style="margin-top:12px;font-size:11px;line-height:1.6"></div>
+                  <div class="note">HIC is computed on the resultant acceleration pulse, linearly upsampled to 1 kHz. Values are estimates from simulated crash pulses for demonstration.</div>
+                </div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view" data-v="kinematics">
+          <div class="grid2">
+            <div class="pane"><div class="ph"><span>Vehicle schematic · deformation & PDOF</span><span id="kClock"></span></div>
+              <div class="pb"><svg id="vehSvg" viewBox="0 0 300 320"></svg></div></div>
+            <div class="pane"><div class="ph"><span>Δv vector diagram (body frame)</span><span></span></div>
+              <div class="pb"><canvas id="dvCv"></canvas></div></div>
+          </div>
+        </div>
+
+        <div class="view" data-v="spectrum">
+          <div class="pane" style="height:100%"><div class="ph"><span>Acceleration spectrum · FFT magnitude · |A(f)|</span><span id="fftMeta"></span></div>
+            <div class="pb"><canvas id="fftCv"></canvas></div></div>
+        </div>
+
+        <div class="view" data-v="trajectory">
+          <div class="pane" style="height:100%"><div class="ph"><span>GPS trajectory · WGS-84 · impact point marked</span><span id="trajMeta"></span></div>
+            <div class="pb"><canvas id="trajCv"></canvas></div></div>
+        </div>
+
+        <div class="view" data-v="data">
+          <div class="pane" style="height:100%"><div class="ph"><span>Live parameter frame · 40 channels</span><span id="dataMeta"></span></div>
+            <div class="pb" style="overflow:auto;padding:12px"><div class="dtbl" id="dataTbl"></div></div></div>
+        </div>
+
+        <div class="view" data-v="forensic">
+          <div class="grid2">
+            <div class="pane"><div class="ph"><span>Data integrity · chain of custody</span><span></span></div>
+              <div class="pb" style="padding:14px;overflow:auto">
+                <div class="kv"><span class="k">Event ID</span><span class="v" id="fEid">—</span></div>
+                <div class="kv"><span class="k">Captured (UTC)</span><span class="v" id="fTime">—</span></div>
+                <div class="kv"><span class="k">Trigger</span><span class="v" id="fTrig">—</span></div>
+                <div class="kv"><span class="k">Write-protect lock</span><span id="fLock" class="lock opn">○ OPEN</span></div>
+                <div class="kv"><span class="k">Params locked</span><span class="v">28 / 40</span></div>
+                <div class="kv"><span class="k">Samples</span><span class="v" id="fSamples">—</span></div>
+                <div class="kv"><span class="k">Integrity</span><span class="v" id="fVerify" style="color:var(--dim)">—</span></div>
+                <div style="font-size:8.5px;color:var(--dim);letter-spacing:1px;margin-top:10px">SHA-256 FLASH IMAGE DIGEST</div>
+                <div class="hash" id="fHash">—</div>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                  <button class="mini" id="btnVerify">RE-VERIFY</button>
+                  <button class="mini" id="btnTamper">SIMULATE TAMPER</button>
+                  <button class="mini" id="btnReport">EXPORT REPORT</button>
+                </div>
+                <div class="note" id="forensicNote">The digest is computed over the crash-critical payload. Altering any locked value changes the digest, so tampering is provably detectable.</div>
+              </div></div>
+            <div class="pane"><div class="ph"><span>Acquisition timeline</span><span></span></div>
+              <div class="pb"><canvas id="timelineCv"></canvas></div></div>
+          </div>
+        </div>
+
+        <div class="view" data-v="report">
+          <div style="display:flex;flex-direction:column;gap:12px;height:100%">
+            <div class="pane" style="flex:none;height:200px"><div class="ph"><span>Crash Sequence Reconstruction · frame-by-frame</span><span id="seqMeta"></span></div>
+              <div class="pb"><canvas id="seqCv"></canvas></div></div>
+            <div class="pane" style="flex:1;min-height:0"><div class="ph"><span>Forensic Incident Narrative</span>
+                <button class="mini" id="btnDownloadReport">DOWNLOAD .TXT</button></div>
+              <div class="pb" style="overflow:auto;padding:16px 22px"><div class="rpt" id="reportBody">
+                <div style="color:var(--dimmer);font-style:italic">Run a scenario to generate the incident report.</div></div></div></div>
+          </div>
+        </div>
+
+      </div>
+      <div class="scrub"><span>REPLAY</span><span id="rStart">—</span>
+        <input type="range" id="scrub" min="0" max="0" value="0" disabled>
+        <span id="rNow">—</span></div>
+    </div>
+
+    <!-- RIGHT RAIL -->
+    <div class="rail r">
+      <div class="sect"><div class="st">Verdict</div>
+        <div class="verdict none" id="verdict">NO EVENT</div>
+        <div id="impactLine" style="font-size:10px;color:var(--dim)"></div></div>
+      <div class="sect"><div class="st">Key Metrics</div>
+        <div class="kv"><span class="k">peak |a|</span><span class="v" id="mPeak">—</span></div>
+        <div class="kv"><span class="k">Δv</span><span class="v" id="mDv">—</span></div>
+        <div class="kv"><span class="k">PDOF</span><span class="v" id="mPdof">—</span></div>
+        <div class="kv"><span class="k">CSI</span><span class="v" id="mCsi">—</span></div>
+        <div class="kv"><span class="k">HIC₃₆</span><span class="v" id="mHic">—</span></div>
+        <div class="kv"><span class="k">pulse dur.</span><span class="v" id="mDur">—</span></div>
+        <div class="kv"><span class="k">rollover</span><span class="v" id="mRoll">—</span></div>
+      </div>
+      <div class="sect"><div class="st">Live Vitals</div>
+        <div class="kv"><span class="k">speed</span><span class="v" id="lSpeed">0.0 km/h</span></div>
+        <div class="kv"><span class="k">|a|</span><span class="v" id="lAcc">0.00 g</span></div>
+        <div class="kv"><span class="k">supply</span><span class="v on" id="lVolt">12.0 V</span></div>
+        <div class="kv"><span class="k">roll</span><span class="v" id="lRoll">0.0°</span></div>
+      </div>
+      <div class="sect"><div class="st">Forensic Status</div>
+        <div class="kv"><span class="k">lock</span><span id="rLock" class="lock opn">○ OPEN</span></div>
+        <div class="kv"><span class="k">checksum</span><span class="v" id="rVerify" style="color:var(--dim)">—</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ===========================================================================
+//  eEDR engine — identical logic to the validated Python core.
+// ===========================================================================
+const CFG={RATE:100,WINDOW_S:20,POST_S:4,ACCEL_G:4,SPEED_DELTA:2.5,ROLL_DEG:45,
+  VOLT_FAIL:9,DEBOUNCE:200,CSI_REF:40,DV_MINOR:16,DV_SEVERE:40,G:9.81};
+CFG.BUFFER=CFG.RATE*CFG.WINDOW_S;CFG.POST=CFG.RATE*CFG.POST_S;CFG.DT=1/CFG.RATE;
+const SCEN={
+ normal_drive:{dur:20,phases:[[0,5,.6,0,0],[5,16,.3,0,0],[16,20,.4,0,0]],events:[]},
+ hard_brake:{dur:16,phases:[[0,7,.7,0,0],[7,12,0,.9,0],[12,16,.2,0,0]],events:[]},
+ frontal_collision:{dur:15,phases:[[0,9,.85,0,0],[9,11,0,1,0]],events:[{type:"impact",t:11,axis:"front",peak:30,ms:120}]},
+ side_impact_left:{dur:13,phases:[[0,9,.55,0,0]],events:[{type:"impact",t:9,axis:"left",peak:22,ms:100}]},
+ rollover:{dur:13,phases:[[0,8,.7,0,0],[8,10,.2,0,26]],events:[{type:"impact",t:9,axis:"right",peak:12,ms:150},{type:"rollover",t:9,roll:78,dur:1.6}]},
+ power_loss_during_crash:{dur:13,phases:[[0,9,.85,0,0],[9,11,0,1,0]],events:[{type:"impact",t:10,axis:"front",peak:28,ms:120},{type:"power_loss",t:10.1,dur:.3}]},
+};
+function makeSim(scn){const S={t:0,speed:0,heading:0,yaw:0,roll:0,pitch:0,lat:19.0760,lon:72.8777,volt:12,scap:5};
+ let rs=42;const rnd=()=>{rs=(rs*1103515245+12345)&0x7fffffff;return rs/0x7fffffff;};const nz=s=>(rnd()-.5)*2*s;
+ const inp=t=>{let r=[0,0,0];for(const[a,b,th,br,st]of scn.phases)if(t>=a&&t<b)r=[th,br,st];return r;};
+ const evs=t=>scn.events.filter(e=>{const d=e.dur||(e.ms||120)/1000;return t>=e.t&&t<=e.t+d;});
+ const pulse=(e,t)=>{const d=(e.ms||120)/1000;if(t<e.t||t>e.t+d)return[0,0,false];const ph=(t-e.t)/d,sh=Math.sin(Math.PI*ph),pk=e.peak*CFG.G;
+  if(e.axis==="front")return[-pk*sh,0,true];if(e.axis==="rear")return[pk*sh,0,true];if(e.axis==="left")return[0,-pk*sh,true];if(e.axis==="right")return[0,pk*sh,true];return[0,0,true];};
+ const ramp=(e,t)=>{const d=e.dur||.5;if(t<=e.t)return 0;if(t>=e.t+d)return 1;return(t-e.t)/d;};
+ return{done:()=>S.t>=scn.dur,step(){const dt=CFG.DT,[th,br,st]=inp(S.t),E=evs(S.t);
+  const drive=th*3.5,brake=br*8,drag=S.speed>0?.02*S.speed+.3:0,longAcc=drive-brake-drag;
+  let iax=0,iay=0,crash=false,pf=false,imp=false;
+  for(const e of E){if(e.type==="impact"){const p=pulse(e,S.t);iax+=p[0];iay+=p[1];if(p[2]){crash=true;imp=true;S.speed=Math.max(0,S.speed-Math.abs(p[0])*dt);}}
+   else if(e.type==="rollover")S.roll=e.roll*ramp(e,S.t);
+   else if(e.type==="power_loss"){S.volt=5*(1-ramp(e,S.t));S.scap=Math.max(3,5-2*ramp(e,S.t));if(S.volt<CFG.VOLT_FAIL)pf=true;}}
+  S.speed=Math.max(0,S.speed+longAcc*dt);S.pitch=-br*4+(imp?iax/CFG.G*2:0);
+  S.yaw=st*.05*Math.min(S.speed,30);S.heading=(S.heading+S.yaw*dt+360)%360;
+  const latAcc=S.yaw*Math.PI/180*S.speed;let ax=(longAcc+iax)/CFG.G,ay=(latAcc+iay)/CFG.G,az=1;ay+=-Math.sin(S.roll*Math.PI/180);
+  ax+=nz(.02);ay+=nz(.02);az+=nz(.02);const kmh=S.speed*3.6;
+  S.lat+=S.speed*dt*Math.cos(S.heading*Math.PI/180)/111000;S.lon+=S.speed*dt*Math.sin(S.heading*Math.PI/180)/111000;
+  S.t+=dt;
+  return{timestamp_ms:Math.round(S.t*1000),speed_kmph:+kmh.toFixed(2),throttle_pct:+(th*100).toFixed(0),
+   brake_pedal_pct:+(br*100).toFixed(0),brake_active:br>.05,steering_angle_deg:st,gear:S.speed>.1?"D":"P",
+   engine_rpm:Math.round(900+th*4500+kmh*25),abs_active:br>.6&&S.speed>2,tcs_active:false,crash_flag_ecu:crash,seatbelt_driver:true,
+   accel_x_g:+ax.toFixed(3),accel_y_g:+ay.toFixed(3),accel_z_g:+az.toFixed(3),
+   gyro_x_dps:+nz(.5).toFixed(2),gyro_y_dps:+nz(.5).toFixed(2),gyro_z_dps:+S.yaw.toFixed(2),
+   roll_deg:+S.roll.toFixed(2),pitch_deg:+S.pitch.toFixed(2),yaw_deg:+S.heading.toFixed(1),
+   latitude:+S.lat.toFixed(6),longitude:+S.lon.toFixed(6),gps_speed_kmph:+kmh.toFixed(1),heading_deg:+S.heading.toFixed(1),
+   altitude_m:+(11+nz(.5)).toFixed(1),gps_fix:3,satellites:9,
+   supply_voltage_v:+S.volt.toFixed(2),rail_5v_v:5.1,supercap_voltage_v:+S.scap.toFixed(2),power_fail:pf,
+   cpu_temp_c:+(45+nz(.5)).toFixed(1),rtc_epoch:1750000000+Math.round(S.t),fault_flags:0,_imp:imp};
+ }};}
+function makeDetector(){let prev=null,deb=0;return function(s){const net=Math.hypot(s.accel_x_g,s.accel_y_g);
+ let dv=0;if(prev!==null)dv=prev-s.speed_kmph;prev=s.speed_kmph;
+ const active={imu:net>=CFG.ACCEL_G,speed:dv>=CFG.SPEED_DELTA,ecu:s.crash_flag_ecu,power:s.power_fail};
+ if(deb>0){deb--;return{trig:false,net,active};}
+ const why=[];if(active.imu)why.push(`IMU |a|=${net.toFixed(1)}g`);if(active.speed)why.push(`Δv=${dv.toFixed(1)}km/h`);
+ if(active.ecu)why.push("ECU flag");if(active.power)why.push("Power-fail");
+ if(why.length){deb=CFG.DEBOUNCE;return{trig:true,why,net,active};}return{trig:false,net,active};};}
+function analyze(win){let pg=0,pk=win[0],pki=0;win.forEach((s,i)=>{const n=Math.hypot(s.accel_x_g,s.accel_y_g);if(n>pg){pg=n;pk=s;pki=i;}});
+ const pre=win.slice(Math.max(0,pki-10),pki+1),post=win.slice(pki,pki+30);
+ const sB=Math.max(...pre.map(s=>s.speed_kmph),pk.speed_kmph),sA=Math.min(...post.map(s=>s.speed_kmph),pk.speed_kmph),dv=Math.max(0,sB-sA);
+ const pdof=Math.atan2(-pk.accel_y_g,-pk.accel_x_g)*180/Math.PI,mr=Math.max(...win.map(s=>Math.abs(s.roll_deg))),ro=mr>=CFG.ROLL_DEG;
+ const csi=Math.min(100,pg/CFG.CSI_REF*100);let sev="Minor";if(ro||dv>=CFG.DV_SEVERE)sev="Severe";else if(dv>=CFG.DV_MINOR)sev="Moderate";
+ // pulse duration: time span where |a| > 5% of peak
+ let lo=pki,hi=pki;const thr=pg*0.05;for(let i=pki;i>=0;i--){if(Math.hypot(win[i].accel_x_g,win[i].accel_y_g)<thr){lo=i;break;}}
+ for(let i=pki;i<win.length;i++){if(Math.hypot(win[i].accel_x_g,win[i].accel_y_g)<thr){hi=i;break;}}
+ const durMs=(hi-lo)*CFG.DT*1000;
+ const hic=computeHIC(win,pki);
+ return{peakG:+pg.toFixed(1),dv:+dv.toFixed(1),pdof:+pdof.toFixed(1),dir:sector(pdof),rollover:ro,maxRoll:+mr.toFixed(0),
+  csi:+csi.toFixed(0),sev,speed:+sB.toFixed(0),axis:axisOf(pdof),peakAt:pk.timestamp_ms,peakIdx:pki,
+  durMs:+durMs.toFixed(0),hic:Math.round(hic),clock:clockPos(pdof),
+  dvx:+(dv*Math.cos(pdof*Math.PI/180)).toFixed(1),dvy:+(dv*Math.sin(pdof*Math.PI/180)).toFixed(1)};}
+function sector(a){a=(a+360)%360;const S=[[22.5,"Frontal"],[67.5,"Front-Left"],[112.5,"Left"],[157.5,"Rear-Left"],[202.5,"Rear"],[247.5,"Rear-Right"],[292.5,"Right"],[337.5,"Front-Right"],[360,"Frontal"]];for(const[l,n]of S)if(a<l)return n;return"Frontal";}
+function axisOf(a){a=(a+360)%360;if(a<45||a>=315)return"front";if(a<135)return"left";if(a<225)return"rear";return"right";}
+function clockPos(pdof){// 0=front=12, +90(left)=9? convention: 12 front, 3 right, 6 rear, 9 left
+ let a=(pdof+360)%360; // 0 front,90 left,180 rear,270 right
+ // convert to clock: front=12; moving toward left goes to 9? standard SAE clock: 12 front,3 right,6 rear,9 left
+ // pdof 0->12, 90(left)->9, 180->6, 270(right)->3
+ const clock=((12 - a/30)%12+12)%12; const c=Math.round(clock)||12; return c+" o'clock";}
+function computeHIC(win,pki){// resultant accel (incl vertical) in g, upsample to 1kHz, HIC36
+ const lo=Math.max(0,pki-20),hi=Math.min(win.length,pki+20);
+ const seg=win.slice(lo,hi).map(s=>Math.hypot(s.accel_x_g,s.accel_y_g,s.accel_z_g-0)); // include gravity ~ ok as head accel proxy
+ if(seg.length<3)return 0;
+ // upsample x10 (10ms->1ms) linear
+ const up=[];for(let i=0;i<seg.length-1;i++){for(let k=0;k<10;k++)up.push(seg[i]+(seg[i+1]-seg[i])*k/10);}
+ const dt=0.001; // 1ms
+ // HIC36: max over windows<=36ms
+ let hic=0;const maxW=36;
+ for(let i=0;i<up.length;i++){for(let j=i+1;j<Math.min(up.length,i+maxW);j++){
+   let sum=0;for(let k=i;k<j;k++)sum+=up[k]*dt;const T=(j-i)*dt;const avg=sum/T;
+   const val=Math.pow(avg,2.5)*T;if(val>hic)hic=val;}}
+ return hic;}
+function fft(re){// iterative radix-2; re length must be power of 2; returns magnitudes
+ const n=re.length;const im=new Array(n).fill(0);
+ for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}
+ for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len;const wr=Math.cos(ang),wi=Math.sin(ang);
+  for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<len/2;k++){
+   const ur=re[i+k],ui=im[i+k],vr=re[i+k+len/2]*cr-im[i+k+len/2]*ci,vi=re[i+k+len/2]*ci+im[i+k+len/2]*cr;
+   re[i+k]=ur+vr;im[i+k]=ui+vi;re[i+k+len/2]=ur-vr;im[i+k+len/2]=ui-vi;
+   const ncr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=ncr;}}}
+ const mag=[];for(let i=0;i<n/2;i++)mag.push(Math.hypot(re[i],im[i]));return mag;}
+async function sha256(o){const t=JSON.stringify(o);if(window.crypto&&crypto.subtle){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");}let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))>>>0;return h.toString(16).padStart(8,"0").repeat(8);}
+
+// ===========================================================================
+//  Canvas helpers
+// ===========================================================================
+const $=id=>document.getElementById(id);
+function fit(cv){const r=cv.getBoundingClientRect();const dpr=Math.min(devicePixelRatio,2);
+ cv.width=Math.max(2,r.width*dpr);cv.height=Math.max(2,r.height*dpr);const c=cv.getContext("2d");
+ c.setTransform(dpr,0,0,dpr,0,0);return{c,w:r.width,h:r.height};}
+const GRID="#dbe3ec",TXT="#7c8a9c";
+function grid(c,w,h,pad,ymin,ymax,yt,xlabel){
+ c.clearRect(0,0,w,h);c.strokeStyle=GRID;c.fillStyle=TXT;c.font="9px monospace";c.lineWidth=1;
+ for(const v of yt){const y=pad.t+(1-(v-ymin)/(ymax-ymin))*(h-pad.t-pad.b);
+  c.beginPath();c.moveTo(pad.l,y);c.lineTo(w-pad.r,y);c.stroke();
+  c.textAlign="right";c.fillText(String(v),pad.l-4,y+3);}
+ if(xlabel){c.textAlign="right";c.fillText(xlabel,w-pad.r,h-3);}}
+function series(c,data,key,ymin,ymax,w,h,pad,color,n,evIdx,lw){
+ const start=Math.max(0,data.length-n),sl=data.slice(start),span=Math.max(1,n-1);
+ c.strokeStyle=color;c.lineWidth=lw||1.6;c.lineJoin="round";c.beginPath();
+ sl.forEach((d,i)=>{const x=pad.l+i/span*(w-pad.l-pad.r);const y=pad.t+(1-(d[key]-ymin)/(ymax-ymin))*(h-pad.t-pad.b);i?c.lineTo(x,y):c.moveTo(x,y);});
+ c.stroke();
+ if(evIdx!=null){const ei=evIdx-start;if(ei>=0&&ei<n){const x=pad.l+ei/span*(w-pad.l-pad.r);
+  c.strokeStyle="#e11d48";c.setLineDash([5,3]);c.lineWidth=1.1;c.beginPath();c.moveTo(x,pad.t);c.lineTo(x,h-pad.b);c.stroke();c.setLineDash([]);
+  c.fillStyle="#e11d48";c.font="8px monospace";c.textAlign="left";c.fillText("EVENT",x+3,pad.t+9);}}}
+
+// ===========================================================================
+//  View renderers
+// ===========================================================================
+function drawOverview(){
+ const n=CFG.BUFFER,ev=RS.eventIdx;
+ {const {c,w,h}=fit($("accScope"));const pad={l:34,r:10,t:14,b:16};
+  grid(c,w,h,pad,-12,35,[-10,0,10,20,30],"t →");
+  // threshold line at crash accel
+  const yT=pad.t+(1-(CFG.ACCEL_G-(-12))/(35-(-12)))*(h-pad.t-pad.b);
+  c.strokeStyle="rgba(229,169,46,.4)";c.setLineDash([2,3]);c.beginPath();c.moveTo(pad.l,yT);c.lineTo(w-pad.r,yT);c.stroke();c.setLineDash([]);
+  c.fillStyle="#e08307";c.font="8px monospace";c.textAlign="left";c.fillText("trigger 4g",pad.l+3,yT-3);
+  series(c,RS.hist,"ax",-12,35,w,h,pad,"#2563eb",n,ev);
+  series(c,RS.hist,"ay",-12,35,w,h,pad,"#e08307",n,ev);
+  series(c,RS.hist,"az",-12,35,w,h,pad,"#0a9d63",n,ev,1);
+  series(c,RS.hist,"net",-12,35,w,h,pad,"#e11d48",n,ev);
+  c.font="8px monospace";c.textAlign="left";
+  c.fillStyle="#2563eb";c.fillText("aₓ",w-70,11);c.fillStyle="#e08307";c.fillText("a_y",w-56,11);
+  c.fillStyle="#0a9d63";c.fillText("a_z",w-38,11);c.fillStyle="#e11d48";c.fillText("|a|",w-20,11);}
+ {const {c,w,h}=fit($("velScope"));const pad={l:34,r:34,t:12,b:16};
+  grid(c,w,h,pad,0,90,[0,30,60,90],"t →");
+  series(c,RS.hist,"v",0,90,w,h,pad,"#0891b2",n,ev);
+  // steering on secondary axis mapped -30..30 -> use same area faintly
+  series(c,RS.hist,"steer",-40,40,w,h,pad,"#7c3aed",n,ev,1);
+  c.fillStyle="#0891b2";c.font="8px monospace";c.textAlign="left";c.fillText("v",w-30,11);
+  c.fillStyle="#7c3aed";c.fillText("δ",w-18,11);}
+ $("accMeta").textContent=`${RS.hist.length} pts`;
+}
+function drawPulse(){
+ const a=RS.captured;if(!a){clearCv("pulseCv");clearCv("pulseVel");$("pulseMetrics").innerHTML=metricCells([["peak |a|","—",""],["Δv","—",""],["duration","—",""],["mean g","—",""]]);return;}
+ const win=RS.eventWin,pki=a.peakIdx;
+ const lo=Math.max(0,pki-30),hi=Math.min(win.length,pki+40);const seg=win.slice(lo,hi);
+ const net=seg.map(s=>Math.hypot(s.accel_x_g,s.accel_y_g));
+ const {c,w,h}=fit($("pulseCv"));const pad={l:34,r:10,t:14,b:20};
+ const ymax=Math.max(10,a.peakG*1.15);grid(c,w,h,pad,0,ymax,[0,Math.round(ymax/3),Math.round(2*ymax/3),Math.round(ymax)],"t [ms] →");
+ // shaded area under curve = impulse -> delta-V
+ c.fillStyle="rgba(69,189,224,.15)";c.beginPath();
+ net.forEach((v,i)=>{const x=pad.l+i/(net.length-1)*(w-pad.l-pad.r);const y=pad.t+(1-v/ymax)*(h-pad.t-pad.b);i?c.lineTo(x,y):c.moveTo(pad.l,h-pad.b);});
+ c.lineTo(w-pad.r,h-pad.b);c.closePath();c.fill();
+ c.strokeStyle="#e11d48";c.lineWidth=2;c.beginPath();
+ net.forEach((v,i)=>{const x=pad.l+i/(net.length-1)*(w-pad.l-pad.r);const y=pad.t+(1-v/ymax)*(h-pad.t-pad.b);i?c.lineTo(x,y):c.moveTo(x,y);});
+ c.stroke();
+ // peak marker
+ const meanG=net.reduce((s,v)=>s+v,0)/net.length;
+ $("pulseMetrics").innerHTML=metricCells([
+  ["peak |a|",a.peakG,"g"],["Δv",a.dv,"km/h"],["duration",a.durMs,"ms"],["mean |a|",meanG.toFixed(1),"g"]]);
+ // velocity profile
+ const {c:c2,w:w2,h:h2}=fit($("pulseVel"));const pad2={l:34,r:10,t:12,b:18};
+ grid(c2,w2,h2,pad2,0,Math.max(10,a.speed*1.1),[0,Math.round(a.speed/2),Math.round(a.speed)],"t →");
+ c2.strokeStyle="#0891b2";c2.lineWidth=1.8;c2.beginPath();
+ seg.forEach((s,i)=>{const x=pad2.l+i/(seg.length-1)*(w2-pad2.l-pad2.r);const y=pad2.t+(1-s.speed_kmph/Math.max(10,a.speed*1.1))*(h2-pad2.t-pad2.b);i?c2.lineTo(x,y):c2.moveTo(x,y);});
+ c2.stroke();
+}
+function drawBiomech(){
+ const a=RS.captured;if(!a){clearCv("hicCv");$("bioMetrics").innerHTML=metricCells([["HIC₃₆","—",""],["peak head g","—",""],["risk AIS3+","—",""],["chest g","—",""]]);$("injuryText").textContent="";$("hicMarker").style.left="0%";return;}
+ const win=RS.eventWin,pki=a.peakIdx;const lo=Math.max(0,pki-25),hi=Math.min(win.length,pki+35);const seg=win.slice(lo,hi);
+ const res=seg.map(s=>Math.hypot(s.accel_x_g,s.accel_y_g,s.accel_z_g));
+ const {c,w,h}=fit($("hicCv"));const pad={l:34,r:10,t:14,b:18};
+ const ymax=Math.max(10,Math.max(...res)*1.15);grid(c,w,h,pad,0,ymax,[0,Math.round(ymax/2),Math.round(ymax)],"t [ms] →");
+ c.strokeStyle="#db2777";c.lineWidth=1.8;c.beginPath();
+ res.forEach((v,i)=>{const x=pad.l+i/(res.length-1)*(w-pad.l-pad.r);const y=pad.t+(1-v/ymax)*(h-pad.t-pad.b);i?c.lineTo(x,y):c.moveTo(x,y);});
+ c.stroke();
+ const peakHead=Math.max(...res).toFixed(1);
+ // AIS3+ risk from HIC (Prasad-Mertz style logistic approx)
+ const risk=(1/(1+Math.exp(3.39+200/a.hic-0.00372*a.hic))*100);
+ const chest=(a.peakG*0.8).toFixed(0);
+ $("bioMetrics").innerHTML=metricCells([["HIC₃₆",a.hic,""],["peak head |a|",peakHead,"g"],["AIS3+ risk",isFinite(risk)?risk.toFixed(0)+"%":"—",""],["chest accel",chest,"g"]]);
+ $("hicMarker").style.left=Math.min(100,a.hic/1500*100)+"%";
+ let lvl,col;if(a.hic<250){lvl="Low — minor or no head injury likely.";col="var(--green)";}
+ else if(a.hic<700){lvl="Moderate — concussion / AIS2 injuries possible.";col="var(--amber)";}
+ else if(a.hic<1000){lvl="Serious — AIS3 injuries probable at HIC≈700.";col="var(--amber)";}
+ else{lvl="Critical — life-threatening head injury; HIC exceeds 1000.";col="var(--red)";}
+ $("injuryText").innerHTML=`<span style="color:${col};font-weight:600">${lvl}</span>`;
+ $("hicMeta").textContent=`HIC₃₆ = ${a.hic}`;
+}
+function drawKinematics(){
+ const a=RS.captured;const svg=$("vehSvg");
+ // vehicle top-view schematic
+ let s=`<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+   <path d="M1 1 L9 5 L1 9" fill="none" stroke="#e11d48" stroke-width="1.6"/></marker></defs>`;
+ s+=`<rect x="0" y="0" width="300" height="320" fill="none"/>`;
+ // grid
+ for(let i=0;i<=300;i+=30)s+=`<line x1="${i}" y1="0" x2="${i}" y2="320" stroke="#e2e8f0" stroke-width="1"/>`;
+ for(let i=0;i<=320;i+=30)s+=`<line x1="0" y1="${i}" x2="300" y2="${i}" stroke="#e2e8f0" stroke-width="1"/>`;
+ // car body (top-down), front at top
+ const dmg=a?a.axis:null;
+ const col=z=>dmg===z?"#e08307":"#0891b2";
+ s+=`<g transform="translate(150,160)">`;
+ // professional car silhouette (front at top), scaled to fit ~150px tall
+ const stroke2="#0e7ec4";
+ s+=`<defs><linearGradient id="bg2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e6edf5" stop-opacity="0.12"/><stop offset="0.5" stop-color="#e6edf5" stop-opacity="0.32"/><stop offset="1" stop-color="#e6edf5" stop-opacity="0.12"/></linearGradient>
+   <linearGradient id="gl2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cbd7e4" stop-opacity="0.5"/><stop offset="1" stop-color="#dbe4ef" stop-opacity="0.6"/></linearGradient></defs>`;
+ // wheels
+ const wh=(x,y)=>`<rect x="${x-5}" y="${y-12}" width="10" height="24" rx="3" fill="#e8edf3" stroke="#8595a8" stroke-width="1"/>`;
+ s+=wh(-42,-52)+wh(42,-52)+wh(-42,52)+wh(42,52);
+ // body silhouette
+ s+=`<path d="M0 -96 C22 -96 36 -84 38 -60 L40 -20 C42 12 42 44 40 76 L38 108 C36 128 22 132 0 132 C-22 132 -36 128 -38 108 L-40 76 C-42 44 -42 12 -40 -20 L-38 -60 C-36 -84 -22 -96 0 -96 Z" fill="url(#bg2)" stroke="${stroke2}" stroke-width="1.6" stroke-linejoin="round"/>`;
+ // windshield / cabin / rear window
+ s+=`<path d="M-26 -32 L26 -32 L20 -6 L-20 -6 Z" fill="url(#gl2)" stroke="${stroke2}" stroke-width="0.9" opacity="0.85"/>`;
+ s+=`<rect x="-26" y="-6" width="52" height="60" rx="7" fill="url(#gl2)" stroke="${stroke2}" stroke-width="0.9" opacity="0.7"/>`;
+ s+=`<path d="M-20 54 L20 54 L26 78 L-26 78 Z" fill="url(#gl2)" stroke="${stroke2}" stroke-width="0.9" opacity="0.85"/>`;
+ // hood lines, mirrors, lights
+ s+=`<path d="M-24 -64 L24 -64" stroke="${stroke2}" stroke-width="0.7" opacity="0.4"/>`;
+ s+=`<path d="M-38 -18 L-48 -22 L-48 -14 L-38 -12 Z M38 -18 L48 -22 L48 -14 L38 -12 Z" fill="${stroke2}" opacity="0.6"/>`;
+ s+=`<rect x="-30" y="-90" width="14" height="6" rx="3" fill="#1e293b" opacity="0.8"/><rect x="16" y="-90" width="14" height="6" rx="3" fill="#1e293b" opacity="0.8"/>`;
+ s+=`<rect x="-30" y="120" width="14" height="6" rx="3" fill="#e11d48" opacity="0.75"/><rect x="16" y="120" width="14" height="6" rx="3" fill="#e11d48" opacity="0.75"/>`;
+ // occupants
+ s+=`<circle cx="-13" cy="22" r="7" fill="none" stroke="#64748b" stroke-width="1.2"/><text x="-13" y="25" font-size="7" fill="#64748b" text-anchor="middle">D</text>`;
+ s+=`<circle cx="13" cy="22" r="7" fill="none" stroke="#94a3b8" stroke-width="1.2"/>`;
+ // deformation zone
+ if(dmg==='front')s+=`<path d="M0 -96 C22 -96 36 -84 38 -60 L-38 -60 C-36 -84 -22 -96 0 -96 Z" fill="#e11d48" fill-opacity="0.2" stroke="#e11d48" stroke-width="3" stroke-linejoin="round"/>`;
+ if(dmg==='rear')s+=`<path d="M-38 108 C-36 128 -22 132 0 132 C22 132 36 128 38 108 Z" fill="#e11d48" fill-opacity="0.2" stroke="#e11d48" stroke-width="3"/>`;
+ if(dmg==='left')s+=`<path d="M-40 -55 L-40 95" stroke="#e11d48" stroke-width="5" stroke-linecap="round"/>`;
+ if(dmg==='right')s+=`<path d="M40 -55 L40 95" stroke="#e11d48" stroke-width="5" stroke-linecap="round"/>`;
+ s+=`<text x="0" y="-104" font-size="8" fill="#7c8a9c" text-anchor="middle">FRONT</text>`;
+ // PDOF arrow
+ if(a){const ang=a.pdof*Math.PI/180; // 0 front(+x fwd -> up = -y), 90 left(+y -> -x)
+  const dx=-Math.sin(ang),dy=-Math.cos(ang); // screen: up=-y=front
+  const L=78;const ox=dx*(L+14),oy=dy*(L+14);
+  s+=`<line x1="${ox}" y1="${oy}" x2="${dx*20}" y2="${dy*20}" stroke="#e11d48" stroke-width="3" marker-end="url(#ah)"/>`;
+  s+=`<text x="${ox*0.6}" y="${oy*0.6-6}" font-size="8" fill="#e11d48" text-anchor="middle">PDOF ${a.pdof}°</text>`;}
+ s+=`</g>`;
+ svg.innerHTML=s;
+ $("kClock").textContent=a?`impact ${a.clock}`:"";
+ // delta-V vector diagram
+ const {c,w,h}=fit($("dvCv"));c.clearRect(0,0,w,h);
+ const cx=w/2,cy=h/2,R=Math.min(w,h)/2-24;
+ // rings
+ c.strokeStyle=GRID;c.lineWidth=1;for(let r=R/3;r<=R;r+=R/3){c.beginPath();c.arc(cx,cy,r,0,2*Math.PI);c.stroke();}
+ c.beginPath();c.moveTo(cx-R,cy);c.lineTo(cx+R,cy);c.moveTo(cx,cy-R);c.lineTo(cx,cy+R);c.stroke();
+ c.fillStyle=TXT;c.font="8px monospace";c.textAlign="center";
+ c.fillText("FRONT",cx,cy-R-6);c.fillText("REAR",cx,cy+R+12);c.fillText("L",cx-R-8,cy+3);c.fillText("R",cx+R+8,cy+3);
+ if(a){const mag=Math.min(R,a.dv/60*R+6);const ang=a.pdof*Math.PI/180;
+  const dx=-Math.sin(ang)*mag,dy=-Math.cos(ang)*mag; // front up
+  c.strokeStyle="#e11d48";c.lineWidth=2.5;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+dx,cy+dy);c.stroke();
+  c.fillStyle="#e11d48";c.beginPath();c.arc(cx+dx,cy+dy,4,0,2*Math.PI);c.fill();
+  c.fillStyle="#e11d48";c.font="9px monospace";c.textAlign="left";c.fillText(`Δv = ${a.dv} km/h`,cx+8,cy-8);
+  c.fillStyle=TXT;c.fillText(`Δvₓ ${a.dvx}  Δv_y ${a.dvy}`,cx-R+4,cy+R+2);}
+}
+function drawSpectrum(){
+ const a=RS.captured;const {c,w,h}=fit($("fftCv"));const pad={l:40,r:12,t:16,b:26};
+ if(!a){grid(c,w,h,pad,0,1,[0,0.5,1],"f [Hz] →");return;}
+ const win=RS.eventWin,pki=a.peakIdx;const N=256;const lo=Math.max(0,pki-N/2);
+ const sig=[];for(let i=0;i<N;i++){const s=win[lo+i];sig.push(s?Math.hypot(s.accel_x_g,s.accel_y_g):0);}
+ const mean=sig.reduce((x,y)=>x+y,0)/N;const re=sig.map(v=>v-mean);
+ const mag=fft(re.slice());const fmax=CFG.RATE/2;const mmax=Math.max(...mag,1e-6);
+ grid(c,w,h,pad,0,1,[0,0.5,1],"f [Hz] →");
+ c.strokeStyle="#7c3aed";c.lineWidth=1.6;c.beginPath();
+ mag.forEach((m,i)=>{const x=pad.l+i/(mag.length-1)*(w-pad.l-pad.r);const y=pad.t+(1-m/mmax)*(h-pad.t-pad.b);i?c.lineTo(x,y):c.moveTo(x,y);});
+ c.stroke();
+ // x ticks
+ c.fillStyle=TXT;c.font="8px monospace";c.textAlign="center";
+ for(let f=0;f<=fmax;f+=10){const x=pad.l+f/fmax*(w-pad.l-pad.r);c.fillText(String(f),x,h-6);}
+ // dominant freq
+ let pi=1,pm=0;for(let i=1;i<mag.length;i++)if(mag[i]>pm){pm=mag[i];pi=i;}
+ const domF=(pi/mag.length*fmax).toFixed(1);
+ $("fftMeta").textContent=`N=${N} · fs=100Hz · dominant ≈ ${domF} Hz`;
+}
+function drawTrajectory(){
+ const win=RS.eventWin||RS.raw;const {c,w,h}=fit($("trajCv"));c.clearRect(0,0,w,h);
+ if(!win.length){return;}
+ const lats=win.map(s=>s.latitude),lons=win.map(s=>s.longitude);
+ const la0=Math.min(...lats),la1=Math.max(...lats),lo0=Math.min(...lons),lo1=Math.max(...lons);
+ const pad=40;const sx=v=>pad+(v-lo0)/((lo1-lo0)||1e-6)*(w-2*pad);const sy=v=>h-pad-(v-la0)/((la1-la0)||1e-6)*(h-2*pad);
+ // grid
+ c.strokeStyle=GRID;c.lineWidth=1;for(let i=0;i<=4;i++){const x=pad+i/4*(w-2*pad),y=pad+i/4*(h-2*pad);
+  c.beginPath();c.moveTo(x,pad);c.lineTo(x,h-pad);c.moveTo(pad,y);c.lineTo(w-pad,y);c.stroke();}
+ // path
+ c.strokeStyle="#0891b2";c.lineWidth=2;c.beginPath();
+ win.forEach((s,i)=>{const x=sx(s.longitude),y=sy(s.latitude);i?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();
+ // start
+ c.fillStyle="#0a9d63";c.beginPath();c.arc(sx(win[0].longitude),sy(win[0].latitude),4,0,2*Math.PI);c.fill();
+ c.fillStyle=TXT;c.font="8px monospace";c.textAlign="left";c.fillText("START",sx(win[0].longitude)+6,sy(win[0].latitude));
+ // impact
+ if(RS.captured){const s=win[Math.min(RS.captured.peakIdx,win.length-1)];const x=sx(s.longitude),y=sy(s.latitude);
+  c.strokeStyle="#e11d48";c.lineWidth=2;c.beginPath();c.arc(x,y,7,0,2*Math.PI);c.stroke();
+  c.beginPath();c.moveTo(x-10,y);c.lineTo(x+10,y);c.moveTo(x,y-10);c.lineTo(x,y+10);c.stroke();
+  c.fillStyle="#e11d48";c.fillText("IMPACT",x+9,y-6);}
+ $("trajMeta").textContent=`${win.length} fixes · ${win[0].latitude.toFixed(4)},${win[0].longitude.toFixed(4)}`;
+}
+function drawTimeline(){
+ const {c,w,h}=fit($("timelineCv"));c.clearRect(0,0,w,h);
+ const events=[["BOOT","#0a9d63"],["MONITORING","#0891b2"],["TRIGGER","#e11d48"],["FREEZE","#e08307"],["ANALYZE","#7c3aed"],["WRITE","#0891b2"],["LOCK","#e08307"]];
+ const done=RS.captured?events.length:(RS.running?2:1);
+ const x0=20,x1=w-20,y=h/2;
+ c.strokeStyle=GRID;c.lineWidth=2;c.beginPath();c.moveTo(x0,y);c.lineTo(x1,y);c.stroke();
+ events.forEach((e,i)=>{const x=x0+i/(events.length-1)*(x1-x0);const on=i<done;
+  c.fillStyle=on?e[1]:"#c2cdda";c.beginPath();c.arc(x,y,6,0,2*Math.PI);c.fill();
+  c.save();c.translate(x,y-14);c.rotate(-Math.PI/5);c.fillStyle=on?"#475569":"#7c8a9c";c.font="8px monospace";c.textAlign="left";c.fillText(e[0],0,0);c.restore();});
+}
+// ---- crash sequence reconstruction strip ----
+function drawSequence(){
+ const a=RS.captured,win=RS.eventWin;const {c,w,h}=fit($("seqCv"));c.clearRect(0,0,w,h);
+ if(!a||!win){c.fillStyle=TXT;c.font="10px monospace";c.textAlign="center";c.fillText("no event captured",w/2,h/2);return;}
+ const pki=a.peakIdx;
+ const frames=[{off:-45,crush:0,lbl:"APPROACH"},{off:-6,crush:0,lbl:"CONTACT"},{off:2,crush:0.5,lbl:"PEAK CRUSH"},{off:16,crush:0.9,lbl:"MAX DEFORM"},{off:55,crush:1,lbl:"REST"}];
+ const cw=w/frames.length;
+ const dirMap={front:[0,-1],rear:[0,1],left:[-1,0],right:[1,0]};
+ frames.forEach((f,i)=>{
+  const idx=Math.max(0,Math.min(win.length-1,pki+f.off));const s=win[idx];
+  const cxp=cw*i+cw/2,cyp=h/2;const Lp=Math.min(cw*0.46,h*0.5);
+  const contact=f.off>=-6,post=f.off>=0;
+  if(i>0){c.strokeStyle=GRID;c.lineWidth=1;c.beginPath();c.moveTo(cw*i,12);c.lineTo(cw*i,h-22);c.stroke();}
+  drawCarTopdown(c,cxp,cyp,Lp,-Math.PI/2,post,post?a.axis:null,a.rollover&&post,f.crush);
+  // impact force arrow at contact/peak frames
+  if(contact&&f.off<=16){const[ex,ey]=dirMap[a.axis]||[0,-1];
+   drawArrow(c,cxp+ex*Lp*0.85,cyp+ey*Lp*0.95,cxp+ex*Lp*0.34,cyp+ey*Lp*0.38,"#e11d48");}
+  c.fillStyle="#64748b";c.font="8px monospace";c.textAlign="center";c.fillText(f.lbl,cxp,15);
+  const dt=f.off*CFG.DT*1000;c.fillStyle=TXT;c.fillText((dt>=0?"+":"")+dt.toFixed(0)+" ms",cxp,h-13);
+  c.fillText(s.speed_kmph.toFixed(0)+" km/h",cxp,h-3);
+ });
+ $("seqMeta").textContent=`${a.dir} · peak ${a.peakG} g @ t+0`;
+}
+
+// ---- worded forensic narrative ----
+function driverBehavior(win,pki){
+ const pre=win.slice(Math.max(0,pki-300),pki+1);
+ const entry=Math.max(...pre.map(s=>s.speed_kmph),0);
+ const maxBrake=Math.max(...pre.map(s=>s.brake_pedal_pct),0);
+ const maxSteer=Math.max(...pre.map(s=>Math.abs(s.steering_angle_deg)),0);
+ const maxThr=Math.max(...pre.map(s=>s.throttle_pct),0);
+ const absOn=pre.some(s=>s.abs_active);
+ let onset=null;for(let i=0;i<pre.length;i++){if(pre[i].brake_pedal_pct>20){onset=(pre.length-1-i)*CFG.DT;break;}}
+ return{entry:entry.toFixed(0),maxBrake:maxBrake.toFixed(0),maxSteer:maxSteer.toFixed(0),maxThr:maxThr.toFixed(0),absOn,onset};
+}
+function N(x){return `<span class="num">${x}</span>`;}
+function buildReport(){
+ const a=RS.captured,win=RS.eventWin;if(!a||!win){return;}
+ const eid=RS.flashImage?RS.flashImage.event:"EVENT_0001";
+ const scen=$("scenario").selectedOptions[0].textContent;
+ const b=driverBehavior(win,a.peakIdx);
+ const impactT=(win[a.peakIdx].timestamp_ms/1000).toFixed(1);
+ const why=RS._why||[];
+ const belt=win[a.peakIdx].seatbelt_driver?"engaged":"not engaged";
+ // injury wording
+ let riskWord;if(a.hic<250)riskWord="a low";else if(a.hic<700)riskWord="a moderate";else if(a.hic<1000)riskWord="a serious";else riskWord="a critical";
+ // braking sentence
+ let brakeSent;
+ if(+b.maxBrake<10)brakeSent="No significant braking input was recorded prior to impact";
+ else if(b.onset!=null)brakeSent=`The driver applied braking (peak ${b.maxBrake}% pedal travel) beginning approximately ${b.onset.toFixed(1)} s before impact${b.absOn?", and the anti-lock braking system (ABS) engaged":""}`;
+ else brakeSent=`Braking input was recorded (peak ${b.maxBrake}% pedal travel)`;
+ const steerSent=+b.maxSteer>5?` A steering input of up to ${b.maxSteer}° was also recorded, consistent with an evasive manoeuvre.`:"";
+ const sevClass=a.sev==="Severe"?"color:var(--red)":a.sev==="Moderate"?"color:var(--amber)":"color:var(--green)";
+ const rollSent=a.rollover?`<h4>Rollover</h4><p>A rollover was detected during the event: the vehicle exceeded ${N(a.maxRoll+"°")} of roll about its longitudinal axis, which independently classifies the collision as severe irrespective of the translational change in velocity.</p>`:"";
+
+ const html=
+ `<h4>Incident Summary</h4>
+  <p>Event ${N(eid)} was recorded by the on-board Enhanced Event Data Recorder under test configuration “${scen}”. Immediately prior to the event the vehicle was travelling at ${N(b.entry+" km/h")} in gear D. At t = ${N(impactT+" s")} the unit detected a <span class="sev" style="${sevClass}">${a.sev.toLowerCase()}</span> ${a.dir.toLowerCase()} collision — principal direction of force ${N(a.pdof+"°")}, corresponding to the ${N(a.clock)} position — and automatically froze the ${N("20 s")} pre-crash data buffer for capture.</p>
+
+  <h4>Pre-Impact Sequence</h4>
+  <p>${brakeSent}.${steerSent} In the moments before contact the accelerometer remained within normal driving bounds, after which the resultant horizontal acceleration rose sharply as the structure began to load.</p>
+
+  <h4>Impact Analysis</h4>
+  <p>The collision produced a peak resultant acceleration of ${N(a.peakG+" g")} over a crash pulse of ${N(a.durMs+" ms")}. Integrating the deceleration over the pulse yields a change in velocity (Δv) of ${N(a.dv+" km/h")} (longitudinal ${N(a.dvx)}, lateral ${N(a.dvy)} km/h). On the Crash Severity Index this corresponds to ${N(a.csi+" / 100")}, classifying the event as <span class="sev" style="${sevClass}">${a.sev}</span>. The direction of force is consistent with a ${a.dir.toLowerCase()} impact concentrated on the ${a.axis} structure of the vehicle.</p>
+
+  <h4>Occupant Risk Assessment</h4>
+  <p>The Head Injury Criterion (HIC₃₆) computed from the resultant head acceleration was ${N(a.hic)}, associated with ${riskWord} probability of serious (AIS3+) head injury. The driver's seatbelt was recorded as ${N(belt)} at the time of impact.</p>
+  ${rollSent}
+  <h4>Data Integrity &amp; Custody</h4>
+  <p>The event was corroborated by ${N(why.length)} independent trigger source${why.length===1?"":"s"} — ${why.join(", ")} — reducing the likelihood of a false capture. A total of ${N(win.length+" samples")} were preserved and the ${N("28 of 40")} crash-critical parameters were written to non-volatile flash memory. The hardware write-protect lock was subsequently asserted, and the SHA-256 integrity digest (${N((RS.flashHash||"").slice(0,16)+"…")}) verified successfully, confirming the sealed record has not been altered.</p>`;
+ $("reportBody").innerHTML=html;
+
+ // plain-text version for download
+ const strip=s=>s.replace(/<[^>]+>/g,"");
+ const T=[];T.push("ENHANCED EVENT DATA RECORDER — FORENSIC INCIDENT REPORT");T.push("=".repeat(60));T.push("");
+ ["Incident Summary","Pre-Impact Sequence","Impact Analysis","Occupant Risk Assessment",a.rollover?"Rollover":null,"Data Integrity & Custody"].filter(Boolean).forEach(h4=>{});
+ // rebuild plain text from the same content
+ T.push("INCIDENT SUMMARY");T.push(strip(`Event ${eid} was recorded under test configuration "${scen}". Immediately prior to the event the vehicle was travelling at ${b.entry} km/h in gear D. At t = ${impactT} s the unit detected a ${a.sev.toLowerCase()} ${a.dir.toLowerCase()} collision (PDOF ${a.pdof}°, ${a.clock}) and froze the 20 s pre-crash buffer.`));T.push("");
+ T.push("PRE-IMPACT SEQUENCE");T.push(strip(brakeSent+"."+steerSent));T.push("");
+ T.push("IMPACT ANALYSIS");T.push(`Peak resultant acceleration ${a.peakG} g over a ${a.durMs} ms pulse. Delta-V ${a.dv} km/h (long. ${a.dvx}, lat. ${a.dvy}). CSI ${a.csi}/100. Classified ${a.sev}. Force concentrated on the ${a.axis} structure.`);T.push("");
+ T.push("OCCUPANT RISK ASSESSMENT");T.push(`HIC36 = ${a.hic}, indicating ${riskWord.replace("a ","")} probability of AIS3+ head injury. Seatbelt ${belt}.`);T.push("");
+ if(a.rollover){T.push("ROLLOVER");T.push(`Vehicle exceeded ${a.maxRoll}° of roll; classified severe.`);T.push("");}
+ T.push("DATA INTEGRITY & CUSTODY");T.push(`Corroborated by ${why.length} trigger(s): ${why.join(", ")}. ${win.length} samples preserved; 28/40 crash-critical parameters written to flash. Write-protect asserted. SHA-256: ${RS.flashHash}. Integrity: PASS.`);
+ RS.reportText=T.join("\n");
+}
+function downloadReport(){if(!RS.reportText)return;const blob=new Blob([RS.reportText],{type:"text/plain"});
+ const url=URL.createObjectURL(blob);const el=document.createElement("a");
+ el.href=url;el.download=(RS.flashImage?RS.flashImage.event:"event")+"_incident_report.txt";el.click();URL.revokeObjectURL(url);}
+
+function drawData(s){
+ const rows=[
+  ["DYNAMICS"],["speed",s.speed_kmph.toFixed(1)+" km/h"],["throttle",s.throttle_pct+" %"],
+  ["brake",s.brake_pedal_pct+" %"],["steering",s.steering_angle_deg.toFixed(0)+"°"],["gear",s.gear],
+  ["rpm",s.engine_rpm],["ABS",s.abs_active?"ACTIVE":"idle"],["ECU crash",s.crash_flag_ecu?"SET":"clear"],
+  ["IMU / ACCEL"],["a_x",s.accel_x_g.toFixed(2)+" g"],["a_y",s.accel_y_g.toFixed(2)+" g"],["a_z",s.accel_z_g.toFixed(2)+" g"],
+  ["|a|",Math.hypot(s.accel_x_g,s.accel_y_g).toFixed(2)+" g"],["gyro_x",s.gyro_x_dps+"°/s"],["gyro_y",s.gyro_y_dps+"°/s"],["gyro_z",s.gyro_z_dps+"°/s"],
+  ["ATTITUDE"],["roll φ",s.roll_deg.toFixed(1)+"°"],["pitch θ",s.pitch_deg.toFixed(1)+"°"],["yaw ψ",s.yaw_deg.toFixed(1)+"°"],["heading",s.heading_deg+"°"],
+  ["GPS / WGS-84"],["lat",s.latitude.toFixed(5)],["lon",s.longitude.toFixed(5)],["gps v",s.gps_speed_kmph+" km/h"],
+  ["alt",s.altitude_m+" m"],["fix",s.gps_fix],["sats",s.satellites],
+  ["SYSTEM / POWER"],["supply",s.supply_voltage_v.toFixed(2)+" V"],["rail 5V",s.rail_5v_v+" V"],["supercap",s.supercap_voltage_v.toFixed(2)+" V"],
+  ["power-fail",s.power_fail?"TRUE":"false"],["cpu temp",s.cpu_temp_c+" °C"],["rtc",s.rtc_epoch],["seatbelt",s.seatbelt_driver?"ON":"off"],["faults",s.fault_flags],
+ ];
+ let html="";for(const r of rows){if(r.length===1){html+=`<div class="grp">${r[0]}</div>`;continue;}
+  html+=`<div class="kv"><span class="k">${r[0]}</span><span class="v">${r[1]}</span></div>`;}
+ $("dataTbl").innerHTML=html;$("dataMeta").textContent=`sample #${s._idx||0}`;
+}
+function metricCells(list){return list.map(([k,v,u])=>`<div class="mcell"><div class="mk">${k}</div><div class="mv">${v}<span class="mu"> ${u||""}</span></div></div>`).join("");}
+function clearCv(id){const cv=$(id);const c=cv.getContext("2d");c.clearRect(0,0,cv.width,cv.height);}
+function drawArrow(c,x0,y0,x1,y1,col){c.strokeStyle=col;c.lineWidth=2;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();
+ const a=Math.atan2(y1-y0,x1-x0);c.fillStyle=col;c.beginPath();c.moveTo(x1,y1);
+ c.lineTo(x1-9*Math.cos(a-.4),y1-9*Math.sin(a-.4));c.lineTo(x1-9*Math.cos(a+.4),y1-9*Math.sin(a+.4));c.closePath();c.fill();}
+function niceStep(t){const p=Math.pow(10,Math.floor(Math.log10(t)));const f=t/p;let n;if(f<1.5)n=1;else if(f<3)n=2;else if(f<7)n=5;else n=10;return n*p;}
+function rrp(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+
+// professional top-down car on canvas. (cx,cy) centre, Lp=length px, ang=screen angle of +x(nose),
+// crashed recolors, dmg = 'front'|'rear'|'left'|'right' for deformation zone.
+function drawCarTopdown(c,cx,cy,Lp,ang,crashed,dmg,rollflag,crush){
+ crush=(crush==null)?(crashed?1:0):crush;
+ const Wp=Lp*0.4;               // width ≈ 0.4 * length
+ const stroke=rollflag?"#e08307":(crashed?"#e11d48":"#0e7ec4");
+ c.save();c.translate(cx,cy);c.rotate(ang);          // now +x = nose (forward)
+ // work in a normalized car frame: length along x [-.5,.5]*Lp, width along y
+ const L=Lp,W=Wp,hl=L/2,hw=W/2;
+ // body silhouette (tapered capsule) via bezier
+ c.beginPath();
+ c.moveTo(hl,0);
+ c.bezierCurveTo(hl,-hw*0.55, hl*0.82,-hw, hl*0.5,-hw);
+ c.lineTo(-hl*0.5,-hw);
+ c.bezierCurveTo(-hl*0.82,-hw, -hl,-hw*0.55, -hl,0);
+ c.bezierCurveTo(-hl,hw*0.55, -hl*0.82,hw, -hl*0.5,hw);
+ c.lineTo(hl*0.5,hw);
+ c.bezierCurveTo(hl*0.82,hw, hl,hw*0.55, hl,0);
+ c.closePath();
+ c.fillStyle=crashed?"rgba(229,72,77,.12)":"rgba(77,184,232,.10)";c.fill();
+ c.lineWidth=Math.max(1.5,Lp*0.03);c.strokeStyle=stroke;c.lineJoin="round";c.stroke();
+ if(Lp>26){ // interior detail only when big enough to read
+  c.lineWidth=Math.max(.6,Lp*0.012);c.strokeStyle=stroke;c.globalAlpha=.6;
+  // windshield
+  c.beginPath();c.moveTo(hl*0.42,-hw*0.7);c.lineTo(hl*0.42,hw*0.7);c.lineTo(hl*0.16,hw*0.62);c.lineTo(hl*0.16,-hw*0.62);c.closePath();c.stroke();
+  // cabin
+  c.strokeRect(-hl*0.16,-hw*0.72,hl*0.34,hw*1.44);
+  // rear window
+  c.beginPath();c.moveTo(-hl*0.42,-hw*0.7);c.lineTo(-hl*0.42,hw*0.7);c.lineTo(-hl*0.2,hw*0.62);c.lineTo(-hl*0.2,-hw*0.62);c.closePath();c.stroke();
+  c.globalAlpha=1;
+  // headlights
+  c.fillStyle="#1e293b";c.globalAlpha=.85;
+  c.fillRect(hl*0.7,-hw*0.62,hl*0.12,hw*0.28);c.fillRect(hl*0.7,hw*0.34,hl*0.12,hw*0.28);
+  // taillights
+  c.fillStyle="#e11d48";c.fillRect(-hl*0.82,-hw*0.62,hl*0.1,hw*0.28);c.fillRect(-hl*0.82,hw*0.34,hl*0.1,hw*0.28);
+  c.globalAlpha=1;
+ }
+ // deformation zone
+ if(dmg&&crashed){c.strokeStyle="#e11d48";c.lineWidth=Math.max(2.5,Lp*0.05);c.lineCap="round";
+  c.beginPath();
+  if(dmg==='front'){c.moveTo(hl*0.5,-hw);c.bezierCurveTo(hl*0.82,-hw,hl,-hw*0.55,hl,0);c.bezierCurveTo(hl,hw*0.55,hl*0.82,hw,hl*0.5,hw);}
+  else if(dmg==='rear'){c.moveTo(-hl*0.5,-hw);c.bezierCurveTo(-hl*0.82,-hw,-hl,-hw*0.55,-hl,0);c.bezierCurveTo(-hl,hw*0.55,-hl*0.82,hw,-hl*0.5,hw);}
+  else if(dmg==='left'){c.moveTo(-hl*0.5,-hw);c.lineTo(hl*0.5,-hw);}
+  else if(dmg==='right'){c.moveTo(-hl*0.5,hw);c.lineTo(hl*0.5,hw);}
+  c.stroke();c.lineCap="butt";
+  // progressive crumple (zigzag crush line) whose depth grows with crush
+  if(crush>0){c.strokeStyle="#f43f5e";c.lineWidth=Math.max(1,Lp*0.02);const d=crush*Lp*0.13,segs=6;c.beginPath();
+   for(let i=0;i<=segs;i++){const tt=i/segs,zig=(i%2?d:0);
+    if(dmg==='front'){const y=-hw+tt*2*hw,x=hl-zig;i?c.lineTo(x,y):c.moveTo(x,y);}
+    else if(dmg==='rear'){const y=-hw+tt*2*hw,x=-hl+zig;i?c.lineTo(x,y):c.moveTo(x,y);}
+    else if(dmg==='left'){const x=-hl*0.5+tt*hl,y=-hw+zig;i?c.lineTo(x,y):c.moveTo(x,y);}
+    else if(dmg==='right'){const x=-hl*0.5+tt*hl,y=hw-zig;i?c.lineTo(x,y):c.moveTo(x,y);}}
+   c.stroke();}}
+ c.restore();
+}
+
+// ---- animated kinematic reconstruction (scaled top-down, metric) ----
+function drawRecon(){
+ const cv=$("reconCv");const arr=RS.eventWin||RS.raw;
+ const {c,w,h}=fit(cv);c.clearRect(0,0,w,h);
+ if(!arr||arr.length<2){c.fillStyle=TXT;c.font="10px monospace";c.textAlign="center";c.fillText("awaiting acquisition…",w/2,h/2);return;}
+ const cap=RS.captured;
+ const upto=(RS.eventWin&&RS.replayIdx!=null)?RS.replayIdx:(arr.length-1);
+ const lat0=arr[0].latitude,lon0=arr[0].longitude,cos0=Math.cos(lat0*Math.PI/180);
+ const X=s=>(s.longitude-lon0)*111000*cos0, Y=s=>(s.latitude-lat0)*111000;
+ let xs=arr.map(X),ys=arr.map(Y);
+ let xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);
+ const cx=(xmin+xmax)/2,cy=(ymin+ymax)/2;const pad=46;
+ const spanX=Math.max(xmax-xmin,24),spanY=Math.max(ymax-ymin,24);
+ const mppx=Math.max(spanX/(w-2*pad),spanY/(h-2*pad));
+ const sx=x=>w/2+(x-cx)/mppx, sy=y=>h/2-(y-cy)/mppx;
+ // metric grid
+ const step=niceStep(mppx*80);c.strokeStyle=GRID;c.fillStyle=TXT;c.font="8px monospace";c.lineWidth=1;
+ const gx0=Math.ceil((cx-w/2*mppx)/step)*step,gx1=cx+w/2*mppx;
+ for(let g=gx0;g<=gx1;g+=step){const px=sx(g);c.beginPath();c.moveTo(px,0);c.lineTo(px,h);c.stroke();c.textAlign="left";c.fillText(g.toFixed(0)+"m",px+2,h-4);}
+ const gy0=Math.ceil((cy-h/2*mppx)/step)*step,gy1=cy+h/2*mppx;
+ for(let g=gy0;g<=gy1;g+=step){const py=sy(g);c.beginPath();c.moveTo(0,py);c.lineTo(w,py);c.stroke();c.textAlign="left";c.fillText(g.toFixed(0)+"m",2,py-2);}
+ // motion trail (colored by speed) up to current index
+ c.lineWidth=2.4;c.lineCap="round";
+ for(let i=1;i<=upto&&i<arr.length;i++){const a=arr[i-1],b=arr[i];const spd=b.speed_kmph;
+  const col=spd>40?"#0891b2":spd>15?"#0a9d63":"#e08307";c.strokeStyle=col;
+  c.beginPath();c.moveTo(sx(X(a)),sy(Y(a)));c.lineTo(sx(X(b)),sy(Y(b)));c.stroke();}
+ c.lineCap="butt";
+ // 0.5s breadcrumb ticks
+ c.fillStyle="#b6c2d0";for(let i=0;i<=upto&&i<arr.length;i+=50){const p=arr[i];c.beginPath();c.arc(sx(X(p)),sy(Y(p)),2,0,2*Math.PI);c.fill();}
+ // impact marker
+ if(cap&&upto>=cap.peakIdx){const ip=arr[Math.min(cap.peakIdx,arr.length-1)];const ix=sx(X(ip)),iy=sy(Y(ip));
+  c.strokeStyle="#e11d48";c.lineWidth=2;c.beginPath();c.arc(ix,iy,9,0,2*Math.PI);c.stroke();
+  c.beginPath();c.moveTo(ix-13,iy);c.lineTo(ix+13,iy);c.moveTo(ix,iy-13);c.lineTo(ix,iy+13);c.stroke();
+  c.fillStyle="#e11d48";c.font="8px monospace";c.textAlign="left";c.fillText("IMPACT",ix+12,iy-9);}
+ // vehicle (to scale) at current position/heading
+ const cur=arr[Math.min(upto,arr.length-1)];const px=sx(X(cur)),py=sy(Y(cur));
+ const hd=cur.heading_deg*Math.PI/180,fsx=Math.sin(hd),fsy=-Math.cos(hd),ang=Math.atan2(fsy,fsx);
+ const Lp=Math.max(34,4.5/mppx),crashed=cap&&upto>=cap.peakIdx;
+ const crush=crashed&&cap?Math.max(0,Math.min(1,(upto-cap.peakIdx)/15)):0;
+ drawCarTopdown(c,px,py,Lp,ang,crashed,crashed&&cap?cap.axis:null,cap&&cap.rollover&&crashed,crush);
+ if(Lp>4.5/mppx*1.3){c.fillStyle="#7c8a9c";c.font="7px monospace";c.textAlign="center";c.fillText("vehicle icon not to scale",px,py+Lp/2+10);}
+ // velocity vector (green) along heading
+ const spd=cur.speed_kmph/3.6;
+ if(spd>0.3){const vlen=Math.min(120,spd*3+12);drawArrow(c,px,py,px+fsx*vlen,py+fsy*vlen,"#0a9d63");}
+ // acceleration (g) vector, world frame
+ const ax=cur.accel_x_g,ay=cur.accel_y_g,mag=Math.hypot(ax,ay);
+ if(mag>0.06){const lsx=fsy,lsy=-fsx;const wx=ax*fsx+ay*lsx,wy=ax*fsy+ay*lsy;const wm=Math.hypot(wx,wy)||1;
+  const alen=Math.min(110,mag*11+8),col=mag>=CFG.ACCEL_G?"#e11d48":"#e08307";
+  drawArrow(c,px,py,px+(wx/wm)*alen,py+(wy/wm)*alen,col);}
+ // scale bar + north + legend
+ const sbpx=step/mppx,x0=w-24-sbpx,yb=h-22;c.strokeStyle="#64748b";c.lineWidth=2;
+ c.beginPath();c.moveTo(x0,yb);c.lineTo(x0+sbpx,yb);c.moveTo(x0,yb-4);c.lineTo(x0,yb+4);c.moveTo(x0+sbpx,yb-4);c.lineTo(x0+sbpx,yb+4);c.stroke();
+ c.fillStyle="#64748b";c.font="9px monospace";c.textAlign="center";c.fillText(step+" m",x0+sbpx/2,yb-6);
+ const nx=w-26,ny=24;c.strokeStyle="#64748b";c.fillStyle="#64748b";c.lineWidth=1.5;
+ c.beginPath();c.moveTo(nx,ny+9);c.lineTo(nx,ny-9);c.stroke();
+ c.beginPath();c.moveTo(nx,ny-9);c.lineTo(nx-4,ny-3);c.lineTo(nx+4,ny-3);c.closePath();c.fill();
+ c.textAlign="center";c.fillText("N",nx,ny+19);
+ c.textAlign="left";c.font="8px monospace";
+ c.fillStyle="#0a9d63";c.fillText("→ velocity",10,h-30);c.fillStyle="#e08307";c.fillText("→ accel (g)",10,h-19);c.fillStyle="#0891b2";c.fillText("■ vehicle 1.8×4.5 m",10,h-8);
+ c.fillStyle=TXT;c.textAlign="left";c.font="9px monospace";
+ c.fillText("t = "+(cur.timestamp_ms/1000).toFixed(2)+" s    v = "+cur.speed_kmph.toFixed(1)+" km/h    ψ = "+cur.heading_deg.toFixed(0)+"°",10,15);
+ $("reconMeta").textContent=`scale 1px≈${mppx.toFixed(2)}m · ${upto+1}/${arr.length} fixes`;
+}
+
+// ===========================================================================
+//  FSM + triggers + rails
+// ===========================================================================
+function renderFSM(state){
+ const nodes=["BOOT","MONITORING","EVENT CAPTURE","ANALYSIS","LOCKED"];
+ const order={idle:0,monitoring:1,crash:2,analyze:3,locked:4};
+ const cur=order[state]!=null?order[state]:0;
+ $("fsm").innerHTML=nodes.map((n,i)=>{
+  const cls=i<cur?"done":(i===cur?"active":"");
+  return `<div class="node ${cls}"><span class="ic"></span>${n}</div>`+(i<nodes.length-1?'<div class="line"></div>':'');
+ }).join("");
+}
+function renderTriggers(active){
+ const T=[["imu","IMU G-spike"],["speed","Speed Δ"],["ecu","ECU flag"],["power","Power-fail"]];
+ $("triggers").innerHTML=T.map(([k,label])=>
+  `<div class="trig ${active&&active[k]?'fired':''}"><span>${label}</span><span class="led"></span></div>`).join("");
+}
+function renderVitals(s){
+ $("lSpeed").textContent=s.speed_kmph.toFixed(1)+" km/h";
+ const net=Math.hypot(s.accel_x_g,s.accel_y_g);$("lAcc").textContent=net.toFixed(2)+" g";$("lAcc").className="v"+(net>=CFG.ACCEL_G?" bad":"");
+ $("lVolt").textContent=s.supply_voltage_v.toFixed(1)+" V";$("lVolt").className="v "+(s.supply_voltage_v<CFG.VOLT_FAIL?"bad":"on");
+ $("lRoll").textContent=s.roll_deg.toFixed(1)+"°";$("lRoll").className="v"+(Math.abs(s.roll_deg)>=45?" bad":"");
+}
+
+// ===========================================================================
+//  Orchestration
+// ===========================================================================
+const RS={sim:null,det:null,raw:[],hist:[],running:false,timer:null,frozen:false,post:0,eventIdx:null,
+ idx:0,prevSpeed:null,captured:null,eventWin:null,events:[],curView:"overview",flashImage:null,tampered:false,replayIdx:null};
+
+function setStatus(c,t,fsm){$("status").className="stat "+c;$("statusText").textContent=t;renderFSM(fsm);}
+function activeView(){return RS.curView;}
+function refreshView(s){
+ const v=RS.curView;
+ if(v==="overview")drawOverview();
+ else if(v==="recon")drawRecon();
+ else if(v==="pulse")drawPulse();
+ else if(v==="biomech")drawBiomech();
+ else if(v==="kinematics")drawKinematics();
+ else if(v==="spectrum")drawSpectrum();
+ else if(v==="trajectory")drawTrajectory();
+ else if(v==="data"&&s)drawData(s);
+ else if(v==="report")drawSequence();
+ else if(v==="forensic")drawTimeline();
+}
+
+function tickOne(){
+ if(RS.sim.done()){stop();if(RS.frozen)finalize();else endClean();return;}
+ const s=RS.sim.step();RS.idx++;s._idx=RS.idx;
+ const net=Math.hypot(s.accel_x_g,s.accel_y_g);
+ RS.hist.push({ax:s.accel_x_g,ay:s.accel_y_g,az:s.accel_z_g,net,v:s.speed_kmph,steer:s.steering_angle_deg});
+ renderVitals(s);
+ $("cSamples").textContent=RS.idx;$("cTime").textContent=(s.timestamp_ms/1000).toFixed(2)+" s";
+ $("cBuffer").textContent=Math.min(RS.raw.length+1,CFG.BUFFER)+" / 2000";
+ if(!RS.frozen){
+  RS.raw.push(s);if(RS.raw.length>CFG.BUFFER+5)RS.raw.shift();
+  const r=RS.det(s);renderTriggers(r.active);
+  if(r.trig){RS.frozen=true;RS.eventIdx=RS.hist.length-1;RS.post=0;RS._why=r.why;
+   setStatus("s-crash","Event · capturing","crash");}
+ }else{RS.raw.push(s);RS.post++;if(RS.post>=CFG.POST){stop();finalize();return;}}
+ refreshView(s);
+}
+function start(){
+ reset(true);const scn=SCEN[$("scenario").value];
+ RS.sim=makeSim(scn);RS.det=makeDetector();RS.running=true;setStatus("s-mon","Monitoring","monitoring");
+ $("run").disabled=true;$("scenario").disabled=true;
+ const fps=60,mult=+$("speed").value,steps=Math.max(1,Math.round(CFG.RATE*mult/fps));
+ RS.timer=setInterval(()=>{for(let i=0;i<steps;i++)if(RS.running)tickOne();},1000/fps);
+}
+function stop(){RS.running=false;clearInterval(RS.timer);$("run").disabled=false;$("scenario").disabled=false;}
+function endClean(){
+ setStatus("s-idle","Complete · no event","monitoring");
+ $("verdict").textContent="NO EVENT";$("verdict").className="verdict none";
+ $("impactLine").textContent="Scenario completed — no crash detected.";
+}
+
+async function finalize(){
+ setStatus("s-lock","Locked","analyze");
+ RS.eventWin=RS.raw.slice();
+ const a=analyze(RS.eventWin);RS.captured=a;
+ // right rail
+ $("verdict").textContent=a.sev.toUpperCase()+" IMPACT";$("verdict").className="verdict "+a.sev;
+ $("impactLine").textContent=`${a.dir} · PDOF ${a.pdof}° · ${a.clock}`+(a.rollover?" · ROLLOVER":"");
+ $("mPeak").textContent=a.peakG+" g";$("mDv").textContent=a.dv+" km/h";$("mPdof").textContent=a.pdof+"°";
+ $("mCsi").textContent=a.csi+"/100";$("mHic").textContent=a.hic;$("mDur").textContent=a.durMs+" ms";
+ $("mRoll").textContent=a.rollover?"YES":"no";$("mRoll").className="v"+(a.rollover?" bad":"");
+ // forensic
+ const crit=RS.eventWin.map(s=>({t:s.timestamp_ms,v:s.speed_kmph,ax:s.accel_x_g,ay:s.accel_y_g,roll:s.roll_deg}));
+ RS.flashImage={event:"EVENT_"+String(RS.events.length+1).padStart(4,"0"),analytics:a,samples:crit};
+ RS.tampered=false;
+ const hash=await sha256(RS.flashImage);RS.flashHash=hash;
+ const eid=RS.flashImage.event;
+ setStatus("s-lock","Locked","locked");
+ // event log
+ RS.events.push({id:eid,a,time:new Date().toISOString()});
+ renderEventLog();$("cEvents").textContent=RS.events.length;
+ // forensic panel
+ $("fEid").textContent=eid;$("fTime").textContent=new Date().toISOString().replace("T"," ").slice(0,19);
+ $("fTrig").textContent=(RS._why||[]).join(", ");$("fSamples").textContent=RS.eventWin.length;
+ $("fHash").textContent=hash;$("fVerify").textContent="PASS";$("fVerify").style.color="var(--green)";
+ $("fLock").className="lock eng";$("fLock").textContent="⬤ ENGAGED";
+ $("rLock").className="lock eng";$("rLock").textContent="⬤ ENGAGED";$("rVerify").textContent="PASS";$("rVerify").style.color="var(--green)";
+ // replay
+ const sc=$("scrub");sc.max=RS.eventWin.length-1;sc.value=sc.max;sc.disabled=false;RS.replayIdx=RS.eventWin.length-1;
+ $("rStart").textContent="0.00 s";
+ updateReplay(RS.eventWin.length-1);
+ buildReport();drawSequence();
+ refreshView(RS.eventWin[RS.eventWin.length-1]);
+}
+function updateReplay(i){const s=RS.eventWin&&RS.eventWin[i];if(!s)return;s._idx=i+1;RS.replayIdx=i;
+ $("rNow").textContent=(s.timestamp_ms/1000).toFixed(2)+" s";renderVitals(s);refreshView(s);}
+
+function renderEventLog(){
+ if(!RS.events.length){$("evlog").innerHTML='<div class="empty">no events captured</div>';return;}
+ $("evlog").innerHTML=RS.events.map((e,i)=>
+  `<div class="evrow ${i===RS.events.length-1?'sel':''}"><div class="eid">${e.id}</div>
+   <div class="em">${e.a.dir} · ${e.a.sev} · Δv ${e.a.dv}km/h · HIC ${e.a.hic}</div></div>`).join("");
+}
+
+// forensic actions
+async function reverify(){
+ if(!RS.flashImage){return;}
+ const h=await sha256(RS.flashImage);const ok=(h===RS.flashHash)&&!RS.tampered;
+ $("fVerify").textContent=ok?"PASS":"FAIL — TAMPERED";$("fVerify").style.color=ok?"var(--green)":"var(--red)";
+ $("rVerify").textContent=ok?"PASS":"FAIL";$("rVerify").style.color=ok?"var(--green)":"var(--red)";
+ $("forensicNote").textContent=ok?"Digest matches the sealed record. Integrity intact.":"Digest mismatch — the locked record was altered after sealing. Tampering detected.";
+}
+function tamper(){
+ if(!RS.flashImage){return;}
+ RS.flashImage.samples[0].v=999.0;RS.tampered=true;reverify();
+}
+function exportReport(){
+ const a=RS.captured;if(!a){return;}
+ const L=[];L.push("ENHANCED EVENT DATA RECORDER — FORENSIC CRASH REPORT");L.push("="+"=".repeat(56));
+ L.push("Event ID        : "+(RS.flashImage?RS.flashImage.event:"—"));
+ L.push("Scenario        : "+$("scenario").value);
+ L.push("Captured (UTC)  : "+new Date().toISOString());
+ L.push("Trigger(s)      : "+(RS._why||[]).join(", "));L.push("");
+ L.push("CRASH ANALYSIS");L.push("-".repeat(57));
+ L.push("Severity        : "+a.sev);L.push("Impact direction: "+a.dir+"  (PDOF "+a.pdof+"°, "+a.clock+")");
+ L.push("Peak |a|        : "+a.peakG+" g");L.push("Delta-V         : "+a.dv+" km/h  (Δvx "+a.dvx+", Δvy "+a.dvy+")");
+ L.push("Pulse duration  : "+a.durMs+" ms");L.push("CSI             : "+a.csi+" / 100");
+ L.push("HIC36           : "+a.hic);L.push("Rollover        : "+(a.rollover?"YES ("+a.maxRoll+"°)":"no"));
+ L.push("Speed at impact : "+a.speed+" km/h");L.push("");
+ L.push("FORENSIC INTEGRITY");L.push("-".repeat(57));
+ L.push("SHA-256         : "+RS.flashHash);L.push("Write-protect   : ENGAGED");L.push("Params locked   : 28 of 40");
+ L.push("Samples         : "+(RS.eventWin?RS.eventWin.length:0));
+ const blob=new Blob([L.join("\n")],{type:"text/plain"});const url=URL.createObjectURL(blob);
+ const a2=document.createElement("a");a2.href=url;a2.download=(RS.flashImage?RS.flashImage.event:"event")+"_report.txt";a2.click();URL.revokeObjectURL(url);
+}
+
+function reset(keep){
+ stop();RS.raw=[];RS.hist=[];RS.frozen=false;RS.post=0;RS.eventIdx=null;RS.idx=0;RS.prevSpeed=null;
+ RS.captured=null;RS.eventWin=null;RS.flashImage=null;RS.tampered=false;RS.replayIdx=null;
+ if(!keep){RS.events=[];renderEventLog();$("cEvents").textContent="0";}
+ setStatus("s-idle","Standby","idle");renderTriggers(null);
+ $("cSamples").textContent="0";$("cTime").textContent="0.00 s";$("cBuffer").textContent="0 / 2000";
+ const blank=makeBlank();renderVitals(blank);
+ $("verdict").textContent="NO EVENT";$("verdict").className="verdict none";$("impactLine").textContent="";
+ ["mPeak","mDv","mPdof","mCsi","mHic","mDur","mRoll"].forEach(id=>$(id).textContent="—");
+ $("fEid").textContent="—";$("fTime").textContent="—";$("fTrig").textContent="—";$("fSamples").textContent="—";
+ $("fHash").textContent="—";$("fVerify").textContent="—";$("fVerify").style.color="var(--dim)";
+ $("fLock").className="lock opn";$("fLock").textContent="○ OPEN";
+ $("rLock").className="lock opn";$("rLock").textContent="○ OPEN";$("rVerify").textContent="—";$("rVerify").style.color="var(--dim)";
+ const sc=$("scrub");sc.value=0;sc.max=0;sc.disabled=true;$("rStart").textContent="—";$("rNow").textContent="—";
+ // clear all views
+ ["accScope","velScope","pulseCv","pulseVel","hicCv","dvCv","fftCv","trajCv","timelineCv","reconCv","seqCv"].forEach(clearCv);
+ $("reportBody").innerHTML='<div style="color:var(--dimmer);font-style:italic">Run a scenario to generate the incident report.</div>';RS.reportText=null;
+ drawOverview();drawTimeline();$("vehSvg").innerHTML="";drawKinematics();
+ $("pulseMetrics").innerHTML="";$("bioMetrics").innerHTML="";$("injuryText").textContent="";$("hicMarker").style.left="0%";
+ drawData(blank);
+}
+function makeBlank(){return{timestamp_ms:0,speed_kmph:0,throttle_pct:0,brake_pedal_pct:0,brake_active:false,steering_angle_deg:0,
+ gear:"P",engine_rpm:900,abs_active:false,crash_flag_ecu:false,seatbelt_driver:true,accel_x_g:0,accel_y_g:0,accel_z_g:1,
+ gyro_x_dps:0,gyro_y_dps:0,gyro_z_dps:0,roll_deg:0,pitch_deg:0,yaw_deg:0,latitude:19.0760,longitude:72.8777,gps_speed_kmph:0,
+ heading_deg:0,altitude_m:11,gps_fix:3,satellites:9,supply_voltage_v:12,rail_5v_v:5.1,supercap_voltage_v:5,power_fail:false,
+ cpu_temp_c:45,rtc_epoch:1750000000,fault_flags:0,_idx:0};}
+
+// tabs
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+ document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");
+ const v=t.dataset.v;document.querySelectorAll(".view").forEach(x=>x.classList.toggle("on",x.dataset.v===v));
+ RS.curView=v;setTimeout(()=>refreshView(RS.eventWin?RS.eventWin[+$("scrub").value||0]:makeBlank()),20);
+});
+$("run").onclick=start;$("reset").onclick=()=>reset(false);
+$("scrub").oninput=e=>updateReplay(+e.target.value);
+$("scenario").onchange=()=>reset(false);
+$("btnVerify").onclick=reverify;$("btnTamper").onclick=tamper;$("btnReport").onclick=exportReport;
+$("btnDownloadReport").onclick=downloadReport;
+addEventListener("resize",()=>refreshView(RS.eventWin?RS.eventWin[+$("scrub").value||0]:makeBlank()));
+window.addEventListener("load",()=>{$("loading").style.display="none";reset(false);});
+</script>
+</body>
+</html>
