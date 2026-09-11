@@ -5,11 +5,6 @@ A forensic-grade vehicle "black box." It continuously records 40 vehicle paramet
 triggers, writes the crash-critical data to tamper-evident storage with a hardware
 write-lock, and survives loss of vehicle power long enough to complete that write.
 
-**Final-year major project — VESIT (EXTC).**
-Kartik Nagare · Jyotiraditya Bhosale · Prince Eppakayal · Mentor: Dr. Nandini Ammanagi
-
----
-
 ## Repository layout
 
 ```
